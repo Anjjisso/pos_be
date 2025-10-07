@@ -21,6 +21,11 @@ model User {
  role      Role  
  resetToken String?
  resetTokenExpiry DateTime?   
+
+  name             String?
+  picture          String?
+  googleId         String?   @unique
+  createdAt        DateTime  @default(now())
 }
  
 enum Role {
