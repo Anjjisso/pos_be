@@ -1,0 +1,100 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               Int       @id @default(autoincrement())
+  email            String    @unique
+  username         String?   @unique
+  password         String
+  role             Role
+  resetToken       String?
+  resetTokenExpiry DateTime?
+  name             String?
+  picture          String?
+  googleId         String?   @unique
+  createdAt        DateTime  @default(now())
+
+  // relasi ke OTP
+  otps             Otp[]
+
+  // relasi ke order
+  orders           Order[]
+}
+
+model Otp {
+  id         Int       @id @default(autoincrement())
+  user       User?     @relation(fields: [userId], references: [id])
+  userId     Int?
+  email      String?   // bisa null, karena OTP bisa terkait user atau pending user
+  codeHash   String
+  expiresAt  DateTime
+  used       Boolean   @default(false)
+  attempts   Int       @default(0)
+  createdAt  DateTime  @default(now())
+}
+
+model PendingUser {
+  id         Int       @id @default(autoincrement())
+  email      String    @unique
+  username   String?   // ✅ tambahkan agar konsisten dengan User
+  password   String
+  role       Role
+  otpHash    String
+  expiresAt  DateTime
+  createdAt  DateTime  @default(now())
+}
+
+model Product {
+  id          Int       @id @default(autoincrement())
+  name        String
+  price       Float
+  stock       Int       @default(0)
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  orderItems  OrderItem[]
+}
+
+model Order {
+  id          Int         @id @default(autoincrement())
+  user        User        @relation(fields: [userId], references: [id])
+  userId      Int
+  total       Float
+  status      OrderStatus @default(PENDING)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  items       OrderItem[]
+}
+
+model OrderItem {
+  id         Int       @id @default(autoincrement())
+  order      Order     @relation(fields: [orderId], references: [id])
+  orderId    Int
+  product    Product   @relation(fields: [productId], references: [id])
+  productId  Int
+  quantity   Int
+  subtotal   Float
+}
+
+enum Role {
+  KASIR
+  ADMIN
+  SUPERADMIN
+  PELANGGAN
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  CANCELLED
+}
