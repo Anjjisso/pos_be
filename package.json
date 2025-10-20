@@ -20,6 +20,10 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
+<<<<<<< HEAD
+=======
+    "@nestjs-modules/mailer": "^2.0.2",
+>>>>>>> 58ebeb27ce1b03e2bd9e69dabeda0763ccd9df26
     "@nestjs/common": "^11.0.1",
     "@nestjs/core": "^11.0.1",
     "@nestjs/jwt": "^11.0.0",
@@ -30,6 +34,10 @@
     "bcrypt": "^6.0.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
+<<<<<<< HEAD
+=======
+    "nodemailer": "^7.0.9",
+>>>>>>> 58ebeb27ce1b03e2bd9e69dabeda0763ccd9df26
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
     "passport-jwt": "^4.0.1",
@@ -42,8 +50,14 @@
     "@nestjs/cli": "^11.0.0",
     "@nestjs/schematics": "^11.0.0",
     "@nestjs/testing": "^11.0.1",
+<<<<<<< HEAD
     "@types/express": "^5.0.0",
     "@types/jest": "^30.0.0",
+=======
+    "@types/express": "^5.0.3",
+    "@types/jest": "^30.0.0",
+    "@types/multer": "^2.0.0",
+>>>>>>> 58ebeb27ce1b03e2bd9e69dabeda0763ccd9df26
     "@types/node": "^22.10.7",
     "@types/passport-google-oauth20": "^2.0.16",
     "@types/passport-jwt": "^4.0.1",
