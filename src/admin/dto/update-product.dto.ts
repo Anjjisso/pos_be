@@ -24,4 +24,9 @@ export class UpdateProductDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @ApiProperty({ example: '8997035567890', description: 'Kode barcode unik untuk produk (EAN-13 atau custom)' }) 
+  @IsOptional()    
+  @IsString()
+  barcode?: string;
 }

@@ -57,11 +57,14 @@ model Product {
   price       Float
   stock       Int       @default(0)
   description String?
+  barcode     String?   @unique
+  image       Bytes?    // Simpan foto dalam bentuk bytes
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
   orderItems  OrderItem[]
 }
+
 
 model Order {
   id          Int         @id @default(autoincrement())

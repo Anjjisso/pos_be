@@ -1,11 +1,17 @@
-import { IsArray, IsInt, IsNumber, ValidateNested } from 'class-validator';
+import { IsArray, IsInt, IsNumber, IsOptional, IsString, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 class OrderItemDto {
-  @ApiProperty({ example: 1, description: 'ID produk yang dibeli' })
+  @ApiPropertyOptional({ example: 1, description: 'ID produk (opsional jika pakai barcode)' })
+  @IsOptional()
   @IsInt()
-  productId: number;
+  productId?: number;
+
+  @ApiPropertyOptional({ example: '8997035567890', description: 'Barcode produk (opsional jika pakai productId)' })
+  @IsOptional()
+  @IsString()
+  barcode?: string;
 
   @ApiProperty({ example: 2, description: 'Jumlah produk yang dibeli' })
   @IsInt()
@@ -19,9 +25,10 @@ export class CreateOrderDto {
 
   @ApiProperty({
     type: [OrderItemDto],
-    description: 'Daftar produk yang dibeli',
+    description: 'Daftar produk yang dibeli (bisa pakai productId atau barcode)',
     example: [
-      { productId: 2, quantity: 1 },
+      { barcode: '8997035567890', quantity: 2 },
+      { productId: 3, quantity: 1 },
     ],
   })
   @IsArray()
