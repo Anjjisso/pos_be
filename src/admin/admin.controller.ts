@@ -137,4 +137,10 @@ export class AdminController {
   ) {
     return this.adminService.topProductsByWeek(Number(year), Number(month), Number(week));
   }
+
+@Get('dashboard/:year')
+dashboardStats(@Param('year') year: string) {
+  return this.adminService.dashboardStatsByYear(Number(year));
+}
+
 }

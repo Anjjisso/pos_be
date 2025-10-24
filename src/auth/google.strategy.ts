@@ -10,22 +10,6 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
       callbackURL: process.env.GOOGLE_CALLBACK_URL!,
       scope: ['email', 'profile'],
-<<<<<<< HEAD
-      passReqToCallback: true, // ⬅️ tambahkan ini
-    });
-  }
-
-  async validate(
-    profile: any,
-    done: VerifyCallback,
-  ): Promise<any> {
-    const { name, emails, photos } = profile;
-    const user = {
-      email: emails[0].value,
-      name: name.givenName + ' ' + name.familyName,
-      picture: photos[0].value,
-    };
-=======
       passReqToCallback: true,
     });
   }
@@ -59,7 +43,6 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
       accessToken,
     };
 
->>>>>>> 58ebeb27ce1b03e2bd9e69dabeda0763ccd9df26
     done(null, user);
   }
 }

@@ -1,17 +1,12 @@
-import { IsArray, IsInt, IsNumber, IsOptional, IsString, ValidateNested } from 'class-validator';
+import { IsArray, IsEnum, IsInt, IsString, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty } from '@nestjs/swagger';
+import { PaymentMethod } from '../../../generated/prisma'; // ✅ Import enum dari Prisma
 
 class OrderItemDto {
-  @ApiPropertyOptional({ example: 1, description: 'ID produk (opsional jika pakai barcode)' })
-  @IsOptional()
-  @IsInt()
-  productId?: number;
-
-  @ApiPropertyOptional({ example: '8997035567890', description: 'Barcode produk (opsional jika pakai productId)' })
-  @IsOptional()
+  @ApiProperty({ example: '8997035567890', description: 'Barcode produk' })
   @IsString()
-  barcode?: string;
+  barcode: string;
 
   @ApiProperty({ example: 2, description: 'Jumlah produk yang dibeli' })
   @IsInt()
@@ -25,14 +20,22 @@ export class CreateOrderDto {
 
   @ApiProperty({
     type: [OrderItemDto],
-    description: 'Daftar produk yang dibeli (bisa pakai productId atau barcode)',
+    description: 'Daftar produk yang dibeli berdasarkan barcode',
     example: [
       { barcode: '8997035567890', quantity: 2 },
-      { productId: 3, quantity: 1 },
+      { barcode: '1234567890123', quantity: 1 },
     ],
   })
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => OrderItemDto)
   items: OrderItemDto[];
+
+  @ApiProperty({
+    example: 'CASH',
+    enum: PaymentMethod,
+    description: 'Metode pembayaran',
+  })
+  @IsEnum(PaymentMethod)
+  paymentMethod: PaymentMethod; // ✅ gunakan enum langsung, bukan string
 }

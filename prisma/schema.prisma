@@ -1,12 +1,3 @@
-<<<<<<< HEAD
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
-=======
->>>>>>> 58ebeb27ce1b03e2bd9e69dabeda0763ccd9df26
 generator client {
   provider = "prisma-client-js"
   output   = "../generated/prisma"
@@ -18,15 +9,6 @@ datasource db {
 }
 
 model User {
-<<<<<<< HEAD
- id        Int      @id @default(autoincrement())
- email     String   @unique
- password  String
- role      Role  
- resetToken String?
- resetTokenExpiry DateTime?   
-
-=======
   id               Int       @id @default(autoincrement())
   email            String    @unique
   username         String?   @unique
@@ -34,19 +16,10 @@ model User {
   role             Role
   resetToken       String?
   resetTokenExpiry DateTime?
->>>>>>> 58ebeb27ce1b03e2bd9e69dabeda0763ccd9df26
   name             String?
   picture          String?
   googleId         String?   @unique
   createdAt        DateTime  @default(now())
-<<<<<<< HEAD
-}
- 
-enum Role {
- KASIR
- ADMIN
- SUPERADMIN
-=======
 
   // relasi ke OTP
   otps             Otp[]
@@ -59,7 +32,7 @@ model Otp {
   id         Int       @id @default(autoincrement())
   user       User?     @relation(fields: [userId], references: [id])
   userId     Int?
-  email      String?   // bisa null, karena OTP bisa terkait user atau pending user
+  email      String?
   codeHash   String
   expiresAt  DateTime
   used       Boolean   @default(false)
@@ -70,7 +43,7 @@ model Otp {
 model PendingUser {
   id         Int       @id @default(autoincrement())
   email      String    @unique
-  username   String?   // ✅ tambahkan agar konsisten dengan User
+  username   String?
   password   String
   role       Role
   otpHash    String
@@ -85,24 +58,24 @@ model Product {
   stock       Int       @default(0)
   description String?
   barcode     String?   @unique
-  image       Bytes?    // Simpan foto dalam bentuk bytes
+  image       Bytes?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
   orderItems  OrderItem[]
 }
 
-
 model Order {
-  id          Int         @id @default(autoincrement())
-  user        User        @relation(fields: [userId], references: [id])
-  userId      Int
-  total       Float
-  status      OrderStatus @default(PENDING)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id             Int             @id @default(autoincrement())
+  user           User            @relation(fields: [userId], references: [id])
+  userId         Int
+  total          Float
+  status         OrderStatus     
+  paymentMethod  PaymentMethod?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 
-  items       OrderItem[]
+  items          OrderItem[]
 }
 
 model OrderItem {
@@ -114,6 +87,8 @@ model OrderItem {
   quantity   Int
   subtotal   Float
 }
+
+// ENUMS
 
 enum Role {
   KASIR
@@ -127,5 +102,12 @@ enum OrderStatus {
   PROCESSING
   COMPLETED
   CANCELLED
->>>>>>> 58ebeb27ce1b03e2bd9e69dabeda0763ccd9df26
+}
+
+// ✅ Enum baru untuk metode pembayaran
+enum PaymentMethod {
+  TUNAI
+  DEBIT
+  KREDIT
+  QRIS
 }

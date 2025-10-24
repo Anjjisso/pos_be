@@ -3,38 +3,17 @@ import {
   UnauthorizedException,
   BadRequestException,
   NotFoundException,
-<<<<<<< HEAD
-=======
   ForbiddenException,
->>>>>>> 58ebeb27ce1b03e2bd9e69dabeda0763ccd9df26
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { Role } from '../../generated/prisma';
-<<<<<<< HEAD
-import * as crypto from 'crypto';
-=======
 import { MailerService } from '@nestjs-modules/mailer';
->>>>>>> 58ebeb27ce1b03e2bd9e69dabeda0763ccd9df26
 
 @Injectable()
 export class AuthService {
   constructor(
-<<<<<<< HEAD
-    private prisma: PrismaService,
-    private jwtService: JwtService,
-  ) {}
-
-  // --- LOGIN & REGISTER seperti sebelumnya ---
-  async validateUser(email: string, password: string) {
-    const user = await this.prisma.user.findUnique({ where: { email } });
-    if (!user) throw new UnauthorizedException('User not found');
-
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid)
-      throw new UnauthorizedException('Invalid credentials');
-=======
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly mailerService: MailerService,
@@ -200,86 +179,12 @@ export class AuthService {
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid)
       throw new UnauthorizedException('Password salah');
->>>>>>> 58ebeb27ce1b03e2bd9e69dabeda0763ccd9df26
 
     const { password: _, ...result } = user;
     return result;
   }
 
   async login(user: any) {
-<<<<<<< HEAD
-    const payload = { sub: user.id, email: user.email};
-    return {
-      access_token: this.jwtService.sign(payload),
-    };
-  }
-
-  async register(email: string, password: string, role: Role) {
-    if (!role) throw new BadRequestException('Role is required');
-
-    const existingUser = await this.prisma.user.findUnique({ where: { email } });
-    if (existingUser) throw new BadRequestException('Email already registered');
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const user = await this.prisma.user.create({
-      data: { email, password: hashedPassword, role },
-    });
-
-    const { password: _, ...result } = user;
-    return result;
-  }
-
-  // --- NEW FEATURE: FORGOT PASSWORD ---
-
-  // 1️⃣ Request Reset Password
-  async requestPasswordReset(email: string) {
-    const user = await this.prisma.user.findUnique({ where: { email } });
-    if (!user) throw new NotFoundException('Email not found');
-
-    // Buat token random (32 karakter)
-    const token = crypto.randomBytes(32).toString('hex');
-
-    // Simpan token + waktu kadaluarsa (1 jam)
-    const expires = new Date(Date.now() + 60 * 60 * 1000);
-
-    await this.prisma.user.update({
-      where: { email },
-      data: {
-        resetToken: token,
-        resetTokenExpiry: expires,
-      },
-    });
-
-    // Biasanya token dikirim via email, tapi sementara return token-nya
-    // (kalau belum setup email service)
-    return { message: 'Reset token created', token };
-  }
-
-  // 2️⃣ Reset Password
-  async resetPassword(token: string, newPassword: string) {
-    const user = await this.prisma.user.findFirst({
-      where: {
-        resetToken: token,
-        resetTokenExpiry: { gt: new Date() }, // pastikan belum expired
-      },
-    });
-
-    if (!user) throw new BadRequestException('Invalid or expired token');
-
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: {
-        password: hashedPassword,
-        resetToken: null,
-        resetTokenExpiry: null,
-      },
-    });
-
-    return { message: 'Password successfully reset' };
-=======
     if (!user || !user.id) {
       throw new UnauthorizedException('User tidak valid');
     }
@@ -359,6 +264,34 @@ export class AuthService {
     };
   }
 
+
+
+// ======================================================
+// 🔹 USER UPDATE PASSWORD SENDIRI (BUTUH PASSWORD LAMA)
+// ======================================================
+async changePassword(userId: number, oldPassword: string, newPassword: string) {
+  const user = await this.prisma.user.findUnique({ where: { id: userId } });
+  if (!user) throw new NotFoundException('User tidak ditemukan');
+
+  if (!user.password) {
+    throw new BadRequestException(
+      'Akun tidak memiliki password lokal. Silakan reset password.'
+    );
+  }
+
+  const isMatch = await bcrypt.compare(oldPassword, user.password);
+  if (!isMatch) throw new BadRequestException('Password lama salah.');
+
+  const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+
+  await this.prisma.user.update({
+    where: { id: userId },
+    data: { password: hashedNewPassword },
+  });
+
+  return { message: 'Password berhasil diperbarui.' };
+}
+
   // ======================================================
   // 🔹 LUPA PASSWORD (OTP)
   // ======================================================
@@ -408,6 +341,5 @@ export class AuthService {
     });
 
     return { message: 'Password berhasil direset.' };
->>>>>>> 58ebeb27ce1b03e2bd9e69dabeda0763ccd9df26
   }
 }

@@ -5,19 +5,6 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-<<<<<<< HEAD
-  const config = new DocumentBuilder()
-    .setTitle('POS API')
-    .setDescription('API docs for POS system')
-    .setVersion('1.0')
-    .addTag('auth')
-    .build();
-
-  const document = SwaggerModule.createDocument(app, config); // ✅ langsung createDocument
-  SwaggerModule.setup('api', app, document);
-
-  await app.listen(process.env.PORT ?? 3000);
-=======
   // ✅ Konfigurasi Swagger
   const config = new DocumentBuilder()
     .setTitle('POS API')
@@ -47,6 +34,5 @@ async function bootstrap() {
 
   await app.listen(process.env.PORT ?? 3000);
   console.log(`🚀 Server running at: http://localhost:${process.env.PORT ?? 3000}/api`);
->>>>>>> 58ebeb27ce1b03e2bd9e69dabeda0763ccd9df26
 }
 bootstrap();

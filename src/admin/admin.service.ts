@@ -154,4 +154,69 @@ export class AdminService {
       totalSold: r._sum.quantity,
     }));
   }
+
+  // --- DASHBOARD STATISTIK (Pisah per fungsi) ---
+
+async dashboardStatsByYear(year: number) {
+  const start = new Date(`${year}-01-01`);
+  const end = new Date(`${year + 1}-01-01`);
+
+  // Total Item Terjual
+  const totalItem = await this.prisma.orderItem.aggregate({
+    _sum: { quantity: true },
+    where: {
+      order: { status: 'COMPLETED', createdAt: { gte: start, lt: end } },
+    },
+  });
+
+  // Total Transaksi
+  const totalTransaksi = await this.prisma.order.count({
+    where: {
+      status: 'COMPLETED',
+      createdAt: { gte: start, lt: end },
+    },
+  });
+
+  // Total Pemasukan
+  const totalPemasukan = await this.prisma.order.aggregate({
+    _sum: { total: true },
+    where: {
+      status: 'COMPLETED',
+      createdAt: { gte: start, lt: end },
+    },
+  });
+
+  // Total Pelanggan Baru
+  const totalPelanggan = await this.prisma.user.count({
+    where: {
+      role: 'PELANGGAN',
+      createdAt: { gte: start, lt: end },
+    },
+  });
+
+  // Statistik metode pembayaran
+  const paymentStats = await this.prisma.order.groupBy({
+    by: ['paymentMethod'],
+    _count: { paymentMethod: true },
+    where: {
+      createdAt: { gte: start, lt: end },
+      status: 'COMPLETED',
+    },
+  });
+
+  const paymentMethodStats = paymentStats.map((item) => ({
+    method: item.paymentMethod,
+    count: item._count.paymentMethod,
+  }));
+
+  return {
+    year,
+    totalItemTerjual: totalItem._sum.quantity || 0,
+    totalTransaksi,
+    totalPemasukan: totalPemasukan._sum.total || 0,
+    totalPelanggan,
+    paymentMethodStats,
+  };
+}
+
 }

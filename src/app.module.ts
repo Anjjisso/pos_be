@@ -2,11 +2,6 @@ import { Module } from '@nestjs/common';
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './users/users.module';
 import { PrismaModule } from './prisma/prisma.module';
-<<<<<<< HEAD
-
-@Module({
-  imports: [AuthModule, UserModule, PrismaModule],
-=======
 import { MailerModule } from '@nestjs-modules/mailer';
 import { ProductsModule } from './products/products.module';
 import { PelangganModule } from './pelanggan/pelanggan.module';
@@ -38,6 +33,5 @@ import { KasirModule } from './kasir/kasir.module';
     KasirModule,
   ],
 
->>>>>>> 58ebeb27ce1b03e2bd9e69dabeda0763ccd9df26
 })
 export class AppModule {}
