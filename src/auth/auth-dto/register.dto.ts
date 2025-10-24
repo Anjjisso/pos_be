@@ -1,5 +1,4 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Role } from '../../../generated/prisma'; // enum Prisma
 
 export class RegisterDto {
   @ApiProperty({ example: 'admin@mail.com' })
@@ -8,6 +7,7 @@ export class RegisterDto {
   @ApiProperty({ example: '123456' })
   password: string;
 
-  @ApiProperty({ enum: Role, example: 'ADMIN' })
-  role: Role;
+  @ApiProperty({ example: 'John Doe' })
+  username: string;
+
 }

@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Post,
+  Patch,
   Get,
   UseGuards,
   Req,
@@ -11,11 +12,18 @@ import { RegisterDto } from './auth-dto/register.dto';
 import { LoginDto } from './auth-dto/login.dto';
 import { ForgotPasswordDto } from './auth-dto/forgot-pw.dto';
 import { ResetPasswordDto } from './auth-dto/reset-pw.dto';
+import { VerifyOtpDto } from './auth-dto/otp.dto';
+import { ChangePasswordDto } from './auth-dto/change-pw.dto';
+import { Roles } from './roles.decorator';
+import { RolesGuard } from './roles.guard';
+import { Role } from '../../generated/prisma'; 
+import { JwtAuthGuard } from './jwt-auth.guard';
 import { AuthGuard } from '@nestjs/passport';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
-import { ApiOperation } from '@nestjs/swagger';
+import { ApiOperation, ApiTags, ApiBearerAuth, ApiBody} from '@nestjs/swagger';
 
+@ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
   constructor(
@@ -24,36 +32,85 @@ export class AuthController {
     private readonly jwtService: JwtService,
   ) {}
 
-  @Post('register')
-  async register(@Body() registerDto: RegisterDto) {
-    return this.authService.register(
-      registerDto.email,
-      registerDto.password,
-      registerDto.role,
-    );
-  }
+  // ===================================
+  // 🔹 REGISTER (KIRIM OTP KE EMAIL)
+  // ===================================
+  
+  @Post()
+registerPelanggan(@Body() dto: RegisterDto) {
+  return this.authService.registerPelanggan(dto.email, dto.username, dto.password);
+}
 
+
+
+  // ===================================
+  // 🔹 LOGIN
+  // ===================================
+  
   @Post('login')
-  async login(@Body() loginDto: LoginDto) {
-    const user = await this.authService.validateUser(
-      loginDto.email,
-      loginDto.password,
-    );
-    return this.authService.login(user);
-  }
+async login(@Body() loginDto: LoginDto) {
 
+  const user = await this.authService.validateUser(
+    loginDto.identifier,
+    loginDto.password,
+  );
+
+  return this.authService.login(user);
+}
+
+  // ===================================
+  // 🔹 KIRIM OTP UNTUK RESET PASSWORD
+  // ===================================
   @Post('forgot-password')
-  @ApiOperation({ summary: 'Request password reset (send email token)' })
+  @ApiOperation({ summary: 'Request password reset (kirim OTP ke email)' })
   async forgotPassword(@Body() body: ForgotPasswordDto) {
     return this.authService.requestPasswordReset(body.email);
   }
 
-  @Post('reset-password')
-  @ApiOperation({ summary: 'Reset password using token' })
-  async resetPassword(@Body() body: ResetPasswordDto) {
-    return this.authService.resetPassword(body.token, body.newPassword);
+  // ===================================
+  // 🔹 VERIFIKASI OTP
+  // ===================================
+  @Post('verify-otp')
+  @ApiOperation({ summary: 'Verifikasi OTP dari email' })
+  async verifyOtp(@Body() body: VerifyOtpDto) {
+    return this.authService.verifyOtp(body.email, body.otp);
   }
 
+  // ===================================
+  // 🔹 RESET PASSWORD PAKAI OTP
+  // ===================================
+  @Post('reset-password')
+  @ApiOperation({ summary: 'Reset password menggunakan OTP' })
+  async resetPassword(@Body() body: ResetPasswordDto) {
+    return this.authService.resetPassword(
+      body.email,
+      body.newPassword,
+      body.otp,
+    );
+  }
+
+  // ===================================
+  // 🔹 GANTI PASSWORD
+  // ===================================
+@Patch('change-password')
+  @ApiBearerAuth('access-token')
+  @ApiBody({ type: ChangePasswordDto })
+  @UseGuards(AuthGuard('jwt'))
+  async changePassword(
+    @Req() req: any,
+    @Body() dto: ChangePasswordDto,
+  ) {
+    return this.authService.changePassword(
+      req.user.id, // ✅ pakai id, bukan sub
+      dto.oldPassword,
+      dto.newPassword
+    );
+  }
+
+
+  // ===================================
+  // 🔹 GOOGLE LOGIN
+  // ===================================
   @Get('google')
   @UseGuards(AuthGuard('google'))
   async googleLogin() {
@@ -65,7 +122,6 @@ export class AuthController {
   async googleRedirect(@Req() req) {
     const googleUser = req.user;
 
-    // Cek apakah user sudah ada
     let user = await this.prisma.user.findUnique({
       where: { email: googleUser.email },
     });
@@ -74,20 +130,19 @@ export class AuthController {
       user = await this.prisma.user.create({
         data: {
           email: googleUser.email,
-          password: '', // Kosongkan atau buat random string
+          password: '', // kosong karena login pakai Google
           name: googleUser.name,
-          role: 'KASIR', // default role
+          role: 'PELANGGAN',
           picture: googleUser.picture,
         },
       });
     }
-
-    // Buat JWT token
+ 
     const payload = { sub: user.id, email: user.email, role: user.role };
     const accessToken = this.jwtService.sign(payload);
 
     return {
-      message: 'Login sukses',
+      message: 'Login sukses via Google',
       access_token: accessToken,
       user,
     };

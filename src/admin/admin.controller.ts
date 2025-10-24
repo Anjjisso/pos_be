@@ -14,7 +14,7 @@ import {
   Res,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import type{ Response } from 'express';
+import type { Response } from 'express';
 import { AdminService } from './admin.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -137,4 +137,10 @@ export class AdminController {
   ) {
     return this.adminService.topProductsByWeek(Number(year), Number(month), Number(week));
   }
+
+@Get('dashboard/:year')
+dashboardStats(@Param('year') year: string) {
+  return this.adminService.dashboardStatsByYear(Number(year));
+}
+
 }
