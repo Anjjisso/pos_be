@@ -18,11 +18,12 @@ import type { Response } from 'express';
 import { AdminService } from './admin.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
+import { StatsType } from './dto/stats-type.enum';
 import { OrderStatus, Role } from '../../generated/prisma';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes, ApiBody, ApiQuery } from '@nestjs/swagger';
 
 @ApiTags('Admin')
 @ApiBearerAuth('access-token')
@@ -118,29 +119,34 @@ export class AdminController {
     return this.adminService.changeUserRole(id, role);
   }
 
-  // --- STATISTIK PRODUK TERLARIS ---
-  @Get('stats/year')
-  getTopByYear(@Query('year') year: number) {
-    return this.adminService.topProductsByYear(Number(year));
-  }
+  
+  // 📌 Statistik Tahunan
+@Get('stats')
+@ApiQuery({ name: 'type', enum: StatsType })
+@ApiQuery({ name: 'years', isArray: true, type: Number })
+async getStats(
+  @Query('type') type: StatsType,
+  @Query('years') years: string[],
+) {
+  const parsedYears = years.map(Number);
+  return this.adminService.getStats(type, parsedYears);
+}
 
-  @Get('stats/month')
-  getTopByMonth(@Query('year') year: number, @Query('month') month: number) {
-    return this.adminService.topProductsByMonth(Number(year), Number(month));
-  }
-
-  @Get('stats/week')
-  getTopByWeek(
-    @Query('year') year: number,
-    @Query('month') month: number,
-    @Query('week') week: number,
-  ) {
-    return this.adminService.topProductsByWeek(Number(year), Number(month), Number(week));
-  }
 
 @Get('dashboard/:year')
 dashboardStats(@Param('year') year: string) {
   return this.adminService.dashboardStatsByYear(Number(year));
 }
+
+// 📌 Leaderboard Produk Terlaris
+@Get('products/top')
+  @ApiOperation({ summary: 'Leaderboard Top Produk' })
+  async getTopProductsLeaderboard() {
+    return this.adminService.topProductsLeaderboard();
+  }
+
+
+
+
 
 }
