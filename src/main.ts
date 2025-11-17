@@ -5,13 +5,24 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // ✅ Konfigurasi Swagger
+  // ============================================================
+  // 🟢 FIX CORS 100% untuk Vite + Axios (Wajib)
+  // ============================================================
+  app.enableCors({
+    origin: "http://localhost:5173", // TANPA SLASH!
+    methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+    credentials: true,
+    allowedHeaders: "Content-Type, Authorization",
+  });
+
+  // ============================================================
+  // 🟢 SWAGGER CONFIG
+  // ============================================================
   const config = new DocumentBuilder()
     .setTitle('POS API')
     .setDescription('API docs for POS system (Kasir, Admin, Superadmin)')
     .setVersion('1.0')
     .addTag('aplikasi-pos')
-    // 🟢 Tambahkan JWT Auth di header
     .addBearerAuth(
       {
         type: 'http',
@@ -21,14 +32,14 @@ async function bootstrap() {
         description: 'Masukkan token JWT (format: Bearer <token>)',
         in: 'header',
       },
-      'access-token', // nama skema
+      'access-token',
     )
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document, {
     swaggerOptions: {
-      persistAuthorization: true, // biar token gak hilang saat reload
+      persistAuthorization: true,
     },
   });
 

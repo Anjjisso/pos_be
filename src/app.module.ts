@@ -7,9 +7,13 @@ import { ProductsModule } from './products/products.module';
 import { PelangganModule } from './pelanggan/pelanggan.module';
 import { AdminModule } from './admin/admin.module';
 import { KasirModule } from './kasir/kasir.module';
+import { ScheduleModule } from '@nestjs/schedule';
+
+
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     PrismaModule,
     AuthModule,
     UserModule,

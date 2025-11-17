@@ -49,13 +49,47 @@ async createOrder(dto: CreateOrderDto, userId: number) {
   }
 
   // Kasir melihat histori order miliknya
-  async getKasirHistory(userId: number) {
-    return this.prisma.order.findMany({
-      where: { userId },
-      include: {
-        items: { include: { product: true } },
+async getKasirHistory(userId: number) {
+  const orders = await this.prisma.order.findMany({
+    where: { userId },
+    select: {
+      id: true,
+      createdAt: true,
+      paymentMethod: true,
+      items: {
+        select: {
+          quantity: true,
+          product: { select: { price: true } }, // ❌ tanpa image
+        },
       },
-      orderBy: { createdAt: 'desc' },
-    });
-  }
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  return orders.map((order, index) => {
+    const totalItem = order.items.reduce((t, i) => t + i.quantity, 0);
+    const totalPrice = order.items.reduce(
+      (t, i) => t + i.quantity * (i.product?.price ?? 0),
+      0,
+    );
+
+    // 🔢 Buat kode transaksi unik
+    const created = new Date(order.createdAt);
+    const trxCode = `TRX${created.getFullYear()}${String(
+      created.getMonth() + 1,
+    ).padStart(2, '0')}${String(created.getDate()).padStart(2, '0')}${String(
+      order.id,
+    ).padStart(4, '0')}`;
+
+    return {
+      no: index + 1,
+      transactionId: trxCode,
+      createdAt: order.createdAt,
+      totalItem,
+      totalPrice,
+      paymentMethod: order.paymentMethod,
+      actionId: order.id,
+    };
+  });
+}
 }

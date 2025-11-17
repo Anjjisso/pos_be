@@ -127,7 +127,7 @@ export class AuthService {
   }
 
   // =====================================================
-  // ✅ REGISTER KHUSUS ROLE (DIPERBAIKI)
+  // ✅ REGISTER KHUSUS ROLE 
   // =====================================================
   async registerPelanggan(email: string, username: string, password: string) {
     return this.register(email, username, password, Role.PELANGGAN);
@@ -307,12 +307,81 @@ async changePassword(userId: number, oldPassword: string, newPassword: string) {
       data: { email, codeHash, expiresAt },
     });
 
-    await this.mailerService.sendMail({
+     await this.mailerService.sendMail({
       to: email,
-      subject: '🔐 Kode OTP Reset Password - POS System',
-      html: `<div>Reset Password OTP: <b>${otpCode}</b></div>`,
+      subject: '📧 Verifikasi Reset Password Anda - POS System',
+      html: `
+      <div style="
+        font-family: 'Poppins', Arial, sans-serif;
+        background-color: #f9f9f9;
+        padding: 40px 0;
+        text-align: center;
+      ">
+        <div style="
+          max-width: 480px;
+          background-color: #ffffff;
+          border-radius: 12px;
+          margin: auto;
+          box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+          overflow: hidden;
+        ">
+          <div style="
+            background: linear-gradient(90deg, #FF8C00, #FFA500);
+            color: #fff;
+            padding: 30px 20px;
+            border-bottom: 4px solid #ff9800;
+          ">
+            <h1 style="margin: 0; font-size: 26px; font-weight: 700;">POS System</h1>
+            <p style="margin: 5px 0 0; font-size: 16px;">Verifikasi Email Anda</p>
+          </div>
+          <div style="padding: 30px 25px;">
+            <p style="font-size: 16px; color: #333; margin-bottom: 25px;">
+              Halo, berikut adalah kode OTP Anda untuk verifikasi akun:
+            </p>
+            <div style="
+              display: inline-block;
+              background-color: #FFE4B5;
+              padding: 16px 32px;
+              border-radius: 12px;
+              font-size: 32px;
+              font-weight: bold;
+              color: #FF8C00;
+              letter-spacing: 12px;
+              box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+              margin-bottom: 25px;
+            ">
+              ${otpCode}
+            </div>
+            <p style="font-size: 15px; color: #333; margin-bottom: 30px;">
+              Kode ini hanya berlaku selama <strong>10 menit</strong>.<br>
+              Jangan berikan kepada siapapun.
+            </p>
+            <a href="#" style="
+              background-color: #FF8C00;
+              color: white;
+              text-decoration: none;
+              padding: 12px 28px;
+              border-radius: 10px;
+              font-size: 16px;
+              font-weight: 600;
+              display: inline-block;
+              box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+            ">
+              Verifikasi Sekarang
+            </a>
+          </div>
+          <div style="
+            background-color: #f2f2f2;
+            padding: 15px;
+            font-size: 13px;
+            color: #777;
+          ">
+            © ${new Date().getFullYear()} POS System — Semua hak dilindungi.
+          </div>
+        </div>
+      </div>
+      `,
     });
-
     return { message: 'Kode OTP reset password dikirim ke email Anda.' };
   }
 

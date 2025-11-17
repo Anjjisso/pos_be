@@ -18,11 +18,17 @@ import type { Response } from 'express';
 import { AdminService } from './admin.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
+import { CreateCategoryDto } from './dto/create-category.dto';
+import { UpdateCategoryDto } from './dto/update-category.dto';
+import { CreateSupplierDto } from './dto/create-supplier.dto';
+import { UpdateSupplierDto } from './dto/update-supplier.dto';
 import { StatsType } from './dto/stats-type.enum';
 import { OrderStatus, Role } from '../../generated/prisma';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
+import * as ExcelJS from 'exceljs';
+import PDFDocument from 'pdfkit';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes, ApiBody, ApiQuery } from '@nestjs/swagger';
 
 @ApiTags('Admin')
@@ -33,6 +39,10 @@ import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes, ApiBody, ApiQuery } 
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
+
+  // ===================================
+  // 🔹 DATA MASTER
+  // ===================================
   // --- PRODUK CRUD ---
   @Post('products')
   @ApiOperation({ summary: 'Admin menambahkan produk baru' })
@@ -90,6 +100,60 @@ export class AdminController {
     res.send(product.image);
   }
 
+// --- KATEGORI ---
+@Post('categories')
+createCategory(@Body() dto: CreateCategoryDto) {
+  return this.adminService.createCategory(dto);
+}
+
+@Get('categories')
+getAllCategories() {
+  return this.adminService.getAllCategories();
+}
+
+@Patch('categories/:id')
+updateCategory(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateCategoryDto) {
+  return this.adminService.updateCategory(id, dto);
+}
+
+@Delete('categories/:id')
+deleteCategory(@Param('id', ParseIntPipe) id: number) {
+  return this.adminService.deleteCategory(id);
+}
+
+// --- SUPPLIER ---
+@Post('suppliers')
+createSupplier(@Body() dto: CreateSupplierDto) {
+  return this.adminService.createSupplier(dto);
+}
+
+@Get('suppliers')
+getAllSuppliers() {
+  return this.adminService.getAllSuppliers();
+}
+
+@Patch('suppliers/:id')
+updateSupplier(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateSupplierDto) {
+  return this.adminService.updateSupplier(id, dto);
+}
+
+@Delete('suppliers/:id')
+deleteSupplier(@Param('id', ParseIntPipe) id: number) {
+  return this.adminService.deleteSupplier(id);
+}
+
+@Get('payment-methods')
+@ApiOperation({ summary: 'Lihat daftar metode pembayaran (enum)' })
+listPaymentMethods() {
+  return this.adminService.listPaymentMethods();
+}
+
+
+
+  // ===================================
+  // 🔹 DASHBOARD
+  // ===================================
+
   // --- ORDER ---
   @Get('orders')
   @ApiOperation({ summary: 'Admin melihat semua order' })
@@ -104,6 +168,83 @@ export class AdminController {
     @Body('status') status: OrderStatus,
   ) {
     return this.adminService.updateOrderStatus(id, status);
+  }
+
+
+
+  // --- DOWNLOAD ORDER EXCEL ---
+  @Get('orders/excel')
+  async downloadOrdersExcel(@Res() res: Response) {
+    const orders = await this.adminService.listOrders();
+
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Daftar Order');
+
+    sheet.columns = [
+      { header: 'No', key: 'no', width: 5 },
+      { header: 'Kode Transaksi', key: 'transactionId', width: 20 },
+      { header: 'Tanggal', key: 'createdAt', width: 20 },
+      { header: 'Kasir', key: 'cashierName', width: 20 },
+      { header: 'Total Item', key: 'totalItem', width: 12 },
+      { header: 'Total Harga (Rp)', key: 'totalPrice', width: 18 },
+      { header: 'Metode Pembayaran', key: 'paymentMethod', width: 20 },
+    ];
+
+    orders.forEach((o) => {
+      sheet.addRow({
+        ...o,
+        createdAt: new Date(o.createdAt).toLocaleString('id-ID'),
+        totalPrice: o.totalPrice.toLocaleString('id-ID'),
+      });
+    });
+
+    // Gaya header
+    sheet.getRow(1).font = { bold: true };
+    sheet.getRow(1).alignment = { horizontal: 'center' };
+
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader('Content-Disposition', 'attachment; filename=orders.xlsx');
+
+    await workbook.xlsx.write(res);
+    res.end();
+  }
+
+  // --- DOWNLOAD ORDER PDF ---
+  @Get('orders/pdf')
+  async downloadOrdersPdf(@Res() res: Response) {
+    const orders = await this.adminService.listOrders();
+
+    const doc = new PDFDocument({ margin: 30, size: 'A4' });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename=orders.pdf');
+    doc.pipe(res);
+
+    // Judul
+    doc.fontSize(18).text('Daftar Order (Transaksi)', { align: 'center' });
+    doc.moveDown();
+
+    // Header kolom
+    doc.fontSize(12).text(
+      'No | Kode Transaksi | Kasir | Tanggal | Total Item | Total Harga | Pembayaran',
+      { underline: true },
+    );
+    doc.moveDown(0.5);
+
+    // Isi data
+    orders.forEach((o) => {
+      doc.fontSize(11).text(
+        `${o.no}. ${o.transactionId} | ${o.cashierName} | ${new Date(
+          o.createdAt,
+        ).toLocaleString('id-ID')} | ${o.totalItem} | Rp${o.totalPrice.toLocaleString(
+          'id-ID',
+        )} | ${o.paymentMethod}`,
+      );
+    });
+
+    doc.end();
   }
 
   // --- USER ---
@@ -139,13 +280,70 @@ dashboardStats(@Param('year') year: string) {
 }
 
 // 📌 Leaderboard Produk Terlaris
-@Get('products/top')
-  @ApiOperation({ summary: 'Leaderboard Top Produk' })
-  async getTopProductsLeaderboard() {
-    return this.adminService.topProductsLeaderboard();
+@Get('products/stats')
+async getProductStats() {
+  return this.adminService.productStats();
+}
+
+@Get('products/leaderboard')
+async getTopProducts() {
+  return this.adminService.topProductsLeaderboard();
+}
+
+@Get('products/leaderboard/excel')
+  async downloadLeaderboardExcel(@Res() res: Response) {
+    const data = await this.adminService.topProductsLeaderboard();
+
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Top Produk');
+
+    sheet.columns = [
+      { header: 'No', key: 'no', width: 5 },
+      { header: 'Nama Produk', key: 'name', width: 25 },
+      { header: 'Terjual', key: 'sold', width: 10 },
+      { header: 'Total Harga', key: 'totalPrice', width: 15 },
+      { header: 'Persentase (%)', key: 'percentage', width: 15 },
+    ];
+
+    data.forEach((item) => sheet.addRow(item));
+
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader('Content-Disposition', 'attachment; filename=leaderboard.xlsx');
+
+    await workbook.xlsx.write(res);
+    res.end();
   }
 
+  // --- DOWNLOAD PDF ---
+  @Get('products/leaderboard/pdf')
+  async downloadLeaderboardPdf(@Res() res: Response) {
+    const data = await this.adminService.topProductsLeaderboard();
 
+    const doc = new PDFDocument({ margin: 30, size: 'A4' });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename=leaderboard.pdf');
+    doc.pipe(res);
+
+    doc.fontSize(18).text('Top Produk Terlaris', { align: 'center' });
+    doc.moveDown();
+
+    doc.fontSize(12);
+    data.forEach((item) => {
+      doc.text(
+        `${item.no}. ${item.name} - ${item.sold}x terjual (Rp${item.totalPrice}) - ${item.percentage}%`,
+      );
+    });
+
+    doc.end();
+  }
+
+@Get('products/latest')
+async latestProducts() {
+  return this.adminService.latestProducts();
+}
 
 
 
