@@ -1,59 +1,112 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatepesananPelangganDto } from './dto/create-pesanan-pelanggan.dto';
 import { randomBytes } from 'crypto';
 import * as bwipjs from 'bwip-js';
-import { OrderStatus } from '../../generated/prisma'; // Enum dari Prisma
+import { OrderStatus } from '../../generated/prisma';
 
 @Injectable()
 export class PelangganService {
   constructor(private prisma: PrismaService) {}
 
-  // ✅ Ambil semua produk yang masih ada stok
+  // ============================================
+  // ✔ Ambil semua produk yang masih ada stok
+  // ============================================
   async getProducts() {
     return this.prisma.product.findMany({
       where: { stock: { gt: 0 } },
+      include: {
+        units: true,
+      },
       orderBy: { name: 'asc' },
     });
   }
 
-  // ✅ Pelanggan membuat pesanan baru
+  // ============================================
+  // ✔ Pelanggan membuat pesanan baru
+  // ============================================
   async createOrder(dto: CreatepesananPelangganDto) {
-    // Generate barcode unik
     const barcode = randomBytes(4).toString('hex').toUpperCase();
 
-    // Ambil produk berdasarkan ID yang dikirim
-    const productIds = dto.items.map((i) => i.productId);
-    const products = await this.prisma.product.findMany({
-      where: { id: { in: productIds } },
-    });
-
-    if (products.length === 0) {
-      throw new NotFoundException('Produk tidak ditemukan');
-    }
-
-    // Hitung total dan siapkan item pesanan
     let total = 0;
-    const orderItems = dto.items.map((item) => {
-      const prod = products.find((p) => p.id === item.productId);
-      if (!prod) {
-        throw new NotFoundException(`Produk dengan ID ${item.productId} tidak ditemukan`);
+    const orderItems: any[] = []; // FIX ERROR NEVER[]
+
+    for (const item of dto.items) {
+      // 1. Cari produk
+      const product = await this.prisma.product.findUnique({
+        where: { id: item.productId },
+      });
+
+      if (!product) {
+        throw new NotFoundException(
+          `Produk dengan ID ${item.productId} tidak ditemukan`,
+        );
       }
 
-      const subtotal = prod.price * item.quantity;
+      // 2. Cari satuan produk (Dus / Pack / Pcs)
+      const unit = await this.prisma.productUnit.findUnique({
+        where: { id: item.unitId },
+      });
+
+      if (!unit || unit.productId !== product.id) {
+        throw new NotFoundException(`Satuan produk tidak valid`);
+      }
+
+      // 3. Cek stok berdasarkan multiplier
+      const realStockNeeded = unit.multiplier * item.quantity;
+
+      if (product.stock < realStockNeeded) {
+        throw new BadRequestException(
+          `${product.name} stok tidak cukup. Dibutuhkan ${realStockNeeded}, tersedia ${product.stock}`,
+        );
+      }
+
+      // 4. Harga & Diskon
+      const originalPrice = unit.price;
+      let discountValue = 0;
+
+      if (item.discountPercent) {
+        discountValue = (originalPrice * item.discountPercent) / 100;
+      }
+
+      if (item.discountValue) {
+        discountValue = item.discountValue;
+      }
+
+      const finalPrice = originalPrice - discountValue;
+      const subtotal = finalPrice * item.quantity;
+
       total += subtotal;
 
-      return {
-        productId: item.productId,
+      // 5. Push item lengkap (WAJIB sesuai Prisma)
+      orderItems.push({
+        productId: product.id,
+        unitId: unit.id,
         quantity: item.quantity,
+        unitPrice: originalPrice,
+        unitMultiplier: unit.multiplier,
+        discountPercent: item.discountPercent ?? 0,
+        discountValue: discountValue,
         subtotal,
-      };
-    });
+      });
 
-    // Simpan ke tabel Order & OrderItem
+      // 6. Kurangi stok
+      await this.prisma.product.update({
+        where: { id: product.id },
+        data: {
+          stock: product.stock - realStockNeeded,
+        },
+      });
+    }
+
+    // 7. Simpan order + item
     const order = await this.prisma.order.create({
       data: {
-        userId: 1, // sementara hardcoded (bisa diganti req.user.id kalau login)
+        userId: 1, // sementara
         total,
         status: OrderStatus.PENDING,
         barcode,
@@ -61,10 +114,17 @@ export class PelangganService {
           create: orderItems,
         },
       },
-      include: { items: { include: { product: true } } },
+      include: {
+        items: {
+          include: {
+            product: true,
+            unit: true,
+          },
+        },
+      },
     });
 
-    // ✅ Buat gambar barcode (base64 PNG)
+    // 8. Generate Barcode Image
     const barcodeImage = await this.generateBarcodeImage(barcode);
 
     return {
@@ -76,7 +136,9 @@ export class PelangganService {
     };
   }
 
-  // ✅ Generate gambar barcode (base64)
+  // ============================================
+  // ✔ Generate barcode PNG base64
+  // ============================================
   async generateBarcodeImage(code: string): Promise<string> {
     const png = await bwipjs.toBuffer({
       bcid: 'code128',
@@ -89,11 +151,20 @@ export class PelangganService {
     return 'data:image/png;base64,' + png.toString('base64');
   }
 
-  // ✅ Lihat pesanan pelanggan berdasarkan barcode
+  // ============================================
+  // ✔ Cari pesanan berdasarkan barcode
+  // ============================================
   async getOrderByBarcode(barcode: string) {
     const order = await this.prisma.order.findUnique({
       where: { barcode },
-      include: { items: { include: { product: true } } },
+      include: {
+        items: {
+          include: {
+            product: true,
+            unit: true,
+          },
+        },
+      },
     });
 
     if (!order) {

@@ -14,19 +14,25 @@ import { KasirService } from './kasir.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 
 @ApiTags('Kasir')
-@ApiBearerAuth('access-token') // 🟢 Tambahkan ini supaya Swagger tahu perlu JWT
+@ApiBearerAuth('access-token') // memberi tahu Swagger bahwa butuh token
 @Controller('kasir')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('KASIR') // hanya kasir yang bisa akses
+@Roles('KASIR') // membatasi hanya role kasir
 export class KasirController {
   constructor(private readonly kasirService: KasirService) {}
 
+  // =========================
+  //  ✔ CREATE ORDER
+  // =========================
   @Post('orders')
   @ApiOperation({ summary: 'Kasir membuat order baru' })
   async createOrder(@Body() dto: CreateOrderDto, @Request() req) {
     return this.kasirService.createOrder(dto, req.user.id);
   }
 
+  // =========================
+  //  ✔ GET HISTORY ORDER KASIR
+  // =========================
   @Get('orders')
   @ApiOperation({ summary: 'Menampilkan histori order milik kasir yang login' })
   async getKasirHistory(@Request() req) {

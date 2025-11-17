@@ -1,3 +1,9 @@
+// ==============================
+//  PRISMA SCHEMA FINAL POS KASIR
+//  SUPPORT: SATUAN PRODUK, MULTIPLIER,
+//           DISKON PRODUK, ORDER UNIT
+// ==============================
+
 generator client {
   provider = "prisma-client-js"
   output   = "../generated/prisma"
@@ -7,6 +13,10 @@ datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
 }
+
+// ======================================================
+// ========================= USER ========================
+// ======================================================
 
 model User {
   id               Int       @id @default(autoincrement())
@@ -21,12 +31,15 @@ model User {
   googleId         String?   @unique
   createdAt        DateTime  @default(now())
 
-  // relasi ke OTP
   otps             Otp[]
-
-  // relasi ke order
   orders           Order[]
 }
+
+
+
+// ======================================================
+// ========================= OTP =========================
+// ======================================================
 
 model Otp {
   id         Int       @id @default(autoincrement())
@@ -40,6 +53,12 @@ model Otp {
   createdAt  DateTime  @default(now())
 }
 
+
+
+// ======================================================
+// ======================= PENDING USER ==================
+// ======================================================
+
 model PendingUser {
   id         Int       @id @default(autoincrement())
   email      String    @unique
@@ -51,30 +70,62 @@ model PendingUser {
   createdAt  DateTime  @default(now())
 }
 
+
+
 // ======================================================
-// ===================== MASTER DATA ====================
+// ========================= PRODUCT =====================
 // ======================================================
 
 model Product {
-  id          Int       @id @default(autoincrement())
+  id          Int             @id @default(autoincrement())
   name        String
-  price       Float
-  costPrice   Float?    // harga beli produk
-  stock       Int       @default(0)
+  price       Float           // harga default (bisa diabaikan jika pakai unit)
+  costPrice   Float?
+  stock       Int             @default(0)
   description String?
-  barcode     String?   @unique
+  barcode     String?         @unique
   image       Bytes?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
 
-  // Relasi ke kategori & supplier
-  category    Category? @relation(fields: [categoryId], references: [id])
+  category    Category?       @relation(fields: [categoryId], references: [id])
   categoryId  Int?
-  supplier    Supplier? @relation(fields: [supplierId], references: [id])
+  supplier    Supplier?       @relation(fields: [supplierId], references: [id])
   supplierId  Int?
 
+  units       ProductUnit[]   // NEW (satuan produk)
   orderItems  OrderItem[]
 }
+
+
+
+// ======================================================
+// ====================== PRODUCT UNIT ===================
+// ======================================================
+//  DUS, PACK, PCS, DLL
+//  multiplier: isi per unit
+//  price: harga per unit
+// ======================================================
+
+model ProductUnit {
+  id          Int       @id @default(autoincrement())
+  product     Product   @relation(fields: [productId], references: [id])
+  productId   Int
+
+  unitName    String               // contoh: Dus, Pack, Pcs
+  multiplier  Int       @default(1)// contoh: 30, 6, 25
+  price       Float                // harga per unit
+
+  createdAt   DateTime  @default(now())
+
+  orderItems  OrderItem[]          // NEW
+}
+
+
+
+// ======================================================
+// ========================= CATEGORY ====================
+// ======================================================
 
 model Category {
   id          Int        @id @default(autoincrement())
@@ -84,6 +135,12 @@ model Category {
 
   products    Product[]
 }
+
+
+
+// ======================================================
+// ========================= SUPPLIER ====================
+// ======================================================
 
 model Supplier {
   id          Int        @id @default(autoincrement())
@@ -97,36 +154,67 @@ model Supplier {
   products    Product[]
 }
 
+
+
 // ======================================================
-// ===================== TRANSAKSI ======================
+// ========================= ORDER =======================
 // ======================================================
 
 model Order {
-  id             Int             @id @default(autoincrement())
-  user           User            @relation(fields: [userId], references: [id])
-  userId         Int
-  total          Float
-  status         OrderStatus     
-  paymentMethod  PaymentMethod?
-  barcode        String?         @unique
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  id              Int           @id @default(autoincrement())
+  user            User          @relation(fields: [userId], references: [id])
+  userId          Int
 
-  items          OrderItem[]
+  subtotal        Float         @default(0)
+  discountPercent Float         @default(0)
+  taxPercent      Float         @default(0)
+  discountValue   Float         @default(0)
+  taxValue        Float         @default(0)
+  total           Float
+
+  status          OrderStatus
+  paymentMethod   PaymentMethod?
+
+  barcode         String?       @unique
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  items           OrderItem[]
 }
 
-model OrderItem {
-  id         Int       @id @default(autoincrement())
-  order      Order     @relation(fields: [orderId], references: [id])
-  orderId    Int
-  product    Product   @relation(fields: [productId], references: [id])
-  productId  Int
-  quantity   Int
-  subtotal   Float
-}
+
 
 // ======================================================
-// ===================== ENUMS ==========================
+// ====================== ORDER ITEM =====================
+// ======================================================
+//  DI SINI MENENTUKAN SATUAN APA YANG DIBELI
+// ======================================================
+
+model OrderItem {
+  id              Int          @id @default(autoincrement())
+  order           Order        @relation(fields: [orderId], references: [id])
+  orderId         Int
+
+  product         Product      @relation(fields: [productId], references: [id])
+  productId       Int
+
+  unit            ProductUnit? @relation(fields: [unitId], references: [id])
+  unitId          Int?         // NEW (Indomie Dus, Aqua Pack, dll)
+
+  quantity        Int
+  unitMultiplier  Int @default(1)
+  unitPrice       Float
+
+  discountPercent Float @default(0)
+  discountValue   Float @default(0)
+
+  subtotal        Float         // harga setelah diskon * qty
+}
+
+
+
+// ======================================================
+// =========================== ENUMS =====================
 // ======================================================
 
 enum Role {
