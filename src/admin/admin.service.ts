@@ -6,6 +6,8 @@ import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { CreateSupplierDto } from './dto/create-supplier.dto';
 import { UpdateSupplierDto } from './dto/update-supplier.dto';
+import { CreateProductUnitDto } from './dto/create-product-unit.dto';
+import { UpdateProductUnitDto } from './dto/update-product-unit.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';  
 import { StatsType } from './dto/stats-type.enum';
@@ -18,7 +20,7 @@ export class AdminService {
 
 
   // ===================================
-  // 🔹 DASHBOARD
+  // 🔹 DATA MASTER
   // ===================================
 
   // =====================================================
@@ -35,7 +37,7 @@ export class AdminService {
       include: { category: true, supplier: true },
     });
   }
-
+ 
   async getProductById(id: number) {
     const product = await this.prisma.product.findUnique({ where: { id } });
     if (!product) throw new NotFoundException('Produk tidak ditemukan');
@@ -87,6 +89,63 @@ export class AdminService {
     await this.getCategoryById(id);
     return this.prisma.category.delete({ where: { id } });
   }
+
+  // =====================================================
+// ===================== PRODUCT UNIT ===================
+// =====================================================
+
+async createProductUnit(dto: CreateProductUnitDto) {
+  // Pastikan produk ada
+  const product = await this.prisma.product.findUnique({
+    where: { id: dto.productId },
+  });
+  if (!product) throw new NotFoundException('Produk tidak ditemukan');
+
+  return this.prisma.productUnit.create({
+    data: {
+      productId: dto.productId,
+      unitName: dto.unitName,
+      multiplier: dto.multiplier,
+      price: dto.price,
+    },
+  });
+}
+
+async getUnitsByProduct(productId: number) {
+  const product = await this.prisma.product.findUnique({
+    where: { id: productId },
+  });
+  if (!product) throw new NotFoundException('Produk tidak ditemukan');
+
+  return this.prisma.productUnit.findMany({
+    where: { productId },
+    orderBy: { multiplier: 'asc' },
+  });
+}
+
+async getUnitById(unitId: number) {
+  const unit = await this.prisma.productUnit.findUnique({
+    where: { id: unitId },
+  });
+  if (!unit) throw new NotFoundException('Satuan tidak ditemukan');
+  return unit;
+}
+
+async updateProductUnit(unitId: number, dto: UpdateProductUnitDto) {
+  await this.getUnitById(unitId);
+  return this.prisma.productUnit.update({
+    where: { id: unitId },
+    data: dto,
+  });
+}
+
+async deleteProductUnit(unitId: number) {
+  await this.getUnitById(unitId);
+  return this.prisma.productUnit.delete({
+    where: { id: unitId },
+  });
+}
+
 
   // =====================================================
   // ===================== SUPPLIER ======================
