@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNumber, Min, IsOptional } from 'class-validator';
+import { IsString, IsNumber, Min, IsOptional, isNumber } from 'class-validator';
 
 export class CreateProductDto {
   @ApiProperty({ example: 'Rinso Cair 1L', description: 'Nama produk' })
@@ -10,6 +10,10 @@ export class CreateProductDto {
   @IsNumber()
   @Min(0)
   price: number;
+
+  @ApiProperty({ example: 15000, description: 'Harga pokok produk' })
+  @IsNumber()
+  costPrice: number;
 
   @ApiProperty({ example: 10, description: 'Jumlah stok produk' })
   @IsOptional()
@@ -22,6 +26,14 @@ export class CreateProductDto {
   @IsString()
   description?: string;
 
+  @ApiProperty({ example: 3, description: 'ID kategori produk' })
+  @IsNumber()
+  categoryId: number;
+
+  @ApiProperty({ example: 1, description: 'ID pemasok produk' })
+  @IsNumber()
+  supplierId: number;
+  
   @ApiProperty({
     example: '8997035567890',
     description: 'Kode barcode unik untuk produk (EAN-13 atau custom)',

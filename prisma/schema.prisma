@@ -78,6 +78,7 @@ model PendingUser {
 
 model Product {
   id          Int             @id @default(autoincrement())
+  productCode String          @unique
   name        String
   price       Float           // harga default (bisa diabaikan jika pakai unit)
   costPrice   Float?
