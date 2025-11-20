@@ -28,8 +28,29 @@ export class AdminService {
   // =====================================================
 
   async createProduct(dto: CreateProductDto) {
-    return this.prisma.product.create({ data: dto });
-  }
+  // Ambil produk terakhir untuk generate kode baru
+  const last = await this.prisma.product.findFirst({
+    orderBy: { id: 'desc' },
+  });
+
+  const nextNumber = (last?.id ?? 0) + 1;
+  const productCode = `NUKA-${String(nextNumber).padStart(4, '0')}`;
+
+  return this.prisma.product.create({
+    data: {
+      productCode: productCode,
+      name: dto.name,
+      price: dto.price,
+      costPrice: dto.costPrice,
+      stock: dto.stock,
+      description: dto.description,
+      barcode: dto.barcode,
+      categoryId: dto.categoryId,
+      supplierId: dto.supplierId,
+    },
+  });
+}
+
 
   async getAllProducts() {
     return this.prisma.product.findMany({
@@ -511,11 +532,11 @@ async allOrders() {
     };
   }
 
-  // ===================== PRODUK TERBARU =====================
-// ===================== PRODUK TERBARU (maksimal 14 hari) =====================
+// ===================== PRODUK TERBARU =====================
+// ===================== PRODUK TERBARU (maksimal 14 hari) ==
 async latestProducts(limit = 10) {
   const twoWeeksAgo = new Date();
-  twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+  twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14); 
 
   // Ambil produk yang ditambahkan dalam 14 hari terakhir
   return this.prisma.product.findMany({

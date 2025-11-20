@@ -22,6 +22,8 @@ import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 import { CreateSupplierDto } from './dto/create-supplier.dto';
 import { UpdateSupplierDto } from './dto/update-supplier.dto';
+import { CreateProductUnitDto } from './dto/create-product-unit.dto';
+import { UpdateProductUnitDto } from './dto/update-product-unit.dto';
 import { StatsType } from './dto/stats-type.enum';
 import { OrderStatus, Role } from '../../generated/prisma';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -99,6 +101,50 @@ export class AdminController {
     res.setHeader('Content-Type', 'image/jpeg');
     res.send(product.image);
   }
+
+// ================================
+  // 🔹 CREATE PRODUCT UNIT
+  // ================================
+  @Post()
+  create(@Body() dto: CreateProductUnitDto) {
+    return this.adminService.createProductUnit(dto);
+  }
+
+  // ================================
+  // 🔹 GET UNITS BY PRODUCT ID
+  // ================================
+  @Get('productId')
+  getUnitsByProduct(@Param('productId', ParseIntPipe) productId: number) {
+    return this.adminService.getUnitsByProduct(productId);
+  }
+
+  // ================================
+  // 🔹 GET PRODUCT UNIT BY ID
+  // ================================
+  @Get('unit/unitId')
+  getUnitById(@Param('unitId', ParseIntPipe) unitId: number) {
+    return this.adminService.getUnitById(unitId);
+  }
+
+  // ================================
+  // 🔹 UPDATE PRODUCT UNIT
+  // ================================
+  @Patch('unitId')
+  update(
+    @Param('unitId', ParseIntPipe) unitId: number,
+    @Body() dto: UpdateProductUnitDto,
+  ) {
+    return this.adminService.updateProductUnit(unitId, dto);
+  }
+
+  // ================================
+  // 🔹 DELETE PRODUCT UNIT
+  // ================================
+  @Delete('unitId')
+  delete(@Param('unitId', ParseIntPipe) unitId: number) {
+    return this.adminService.deleteProductUnit(unitId);
+  }
+
 
 // --- KATEGORI ---
 @Post('categories')
