@@ -19,7 +19,9 @@ export class OrderItemDto {
     example: 2,
     description: 'Jumlah unit yang dibeli (misal: 2 dus, 3 pack)',
   })
+  
   @IsInt()
+  @IsOptional()
   quantity: number;
 
   @ApiProperty({
@@ -46,7 +48,7 @@ export class CreateOrderDto {
     type: [OrderItemDto],
     description: 'Daftar produk yang dibeli',
     example: [
-      { barcode: '8997035567890', unitId: 5, quantity: 2 },
+      { barcode: '8997035567890',  quantity: 2 },
       { barcode: '1234567890123', unitId: 9, quantity: 1, discountPercent: 10 },
     ],
   })
@@ -54,6 +56,7 @@ export class CreateOrderDto {
   @ValidateNested({ each: true })
   @Type(() => OrderItemDto)
   items: OrderItemDto[];
+
 
   @ApiProperty({
     example: 'TUNAI',

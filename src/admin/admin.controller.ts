@@ -24,6 +24,8 @@ import { CreateSupplierDto } from './dto/create-supplier.dto';
 import { UpdateSupplierDto } from './dto/update-supplier.dto';
 import { CreateProductUnitDto } from './dto/create-product-unit.dto';
 import { UpdateProductUnitDto } from './dto/update-product-unit.dto';
+import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 import { StatsType } from './dto/stats-type.enum';
 import { OrderStatus, Role } from '../../generated/prisma';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -167,6 +169,38 @@ deleteCategory(@Param('id', ParseIntPipe) id: number) {
   return this.adminService.deleteCategory(id);
 }
 
+@Post('category/:id/image')
+  @ApiOperation({ summary: 'Admin menambahkan atau mengganti foto category (disimpan dalam DB sebagai bytes)' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadCategoryImage(
+    @Param('id', ParseIntPipe) id: number,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return this.adminService.updateCategoryImageBytes(id, file.buffer);
+  }
+
+  @Get('category/:id/image')
+  @ApiOperation({ summary: 'Melihat foto category (dalam bentuk file image)' })
+  async getCategoryImage(@Param('id', ParseIntPipe) id: number, @Res() res: Response) {
+    const category = await this.adminService.getCategoryById(id);
+    if (!category.image) return res.status(404).send('Tidak ada foto');
+    res.setHeader('Content-Type', 'image/jpeg');
+    res.send(category.image);
+  }
+
+
 // --- SUPPLIER ---
 @Post('suppliers')
 createSupplier(@Body() dto: CreateSupplierDto) {
@@ -293,18 +327,47 @@ listPaymentMethods() {
     doc.end();
   }
 
-  // --- USER ---
-  @Get('users')
-  @ApiOperation({ summary: 'Admin melihat daftar user' })
-  listUsers() {
-    return this.adminService.listUsers();
-  }
+// ===================================
+// 🔹 MANAGE USERS
+// ===================================
+  // LIST USER
+@Get('users')
+@ApiOperation({ summary: 'Admin melihat daftar user' })
+listUsers() {
+  return this.adminService.getAllUsers();
+}
 
-  @Patch('users/:id/role')
-  @ApiOperation({ summary: 'Admin mengubah role user' })
-  changeUserRole(@Param('id', ParseIntPipe) id: number, @Body('role') role: Role) {
-    return this.adminService.changeUserRole(id, role);
-  }
+// DETAIL USER
+@Get('users/:id')
+@ApiOperation({ summary: 'Admin melihat detail user' })
+getUser(@Param('id', ParseIntPipe) id: number) {
+  return this.adminService.getUserById(id);
+}
+
+// CREATE USER
+@Post('users')
+@ApiOperation({ summary: 'Admin membuat user baru' })
+createUser(@Body() dto: CreateUserDto) {
+  return this.adminService.createUser(dto);
+}
+
+// UPDATE USER
+@Patch('users/:id')
+@ApiOperation({ summary: 'Admin mengubah data user' })
+updateUser(
+  @Param('id', ParseIntPipe) id: number,
+  @Body() dto: UpdateUserDto,
+) {
+  return this.adminService.updateUser(id, dto);
+}
+
+// DELETE USER
+@Delete('users/:id')
+@ApiOperation({ summary: 'Admin menghapus user' })
+deleteUser(@Param('id', ParseIntPipe) id: number) {
+  return this.adminService.deleteUser(id);
+}
+
 
   
   // 📌 Statistik Tahunan

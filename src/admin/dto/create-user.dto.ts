@@ -1,6 +1,13 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, MinLength } from 'class-validator';
-import { Role } from '../../../generated/prisma'; // ✅ Enum Role dari Prisma
+import {
+  IsEmail,
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MinLength,
+} from 'class-validator';
+import { Role, UserStatus } from '../../../generated/prisma'; // ✅ Enum dari Prisma
 
 export class CreateUserDto {
   @ApiProperty({ example: 'kasir1@gmail.com' })
@@ -12,17 +19,20 @@ export class CreateUserDto {
   @IsNotEmpty()
   username: string;
 
-  @ApiProperty({ example: 'password123' })
+  @ApiProperty({
+    example: 'Password123!',
+    description: 'Minimal 8 karakter, ada huruf besar & angka/simbol',
+  })
   @IsString()
-  @MinLength(6)
+  @MinLength(8) // ⬅️ samakan dengan aturan di UI
   password: string;
 
   @ApiProperty({ enum: Role, example: Role.KASIR })
   @IsEnum(Role)
   role: Role;
 
-  @ApiProperty({ example: 'Kasir Utama', required: false })
+  @ApiProperty({ enum: UserStatus, required: false })
+  @IsEnum(UserStatus)
   @IsOptional()
-  @IsString()
-  name?: string;
+  status?: UserStatus;
 }
