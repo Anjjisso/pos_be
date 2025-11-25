@@ -1,8 +1,4 @@
-// ==============================
-//  PRISMA SCHEMA FINAL POS KASIR
-//  SUPPORT: SATUAN PRODUK, MULTIPLIER,
-//           DISKON PRODUK, ORDER UNIT
-// ==============================
+
 
 generator client {
   provider = "prisma-client-js"
@@ -30,6 +26,8 @@ model User {
   picture          String?
   googleId         String?   @unique
   createdAt        DateTime  @default(now())
+  status           UserStatus @default(AKTIF) 
+  lastLogin        DateTime?
 
   otps             Otp[]
   orders           Order[]
@@ -130,6 +128,7 @@ model ProductUnit {
 
 model Category {
   id          Int        @id @default(autoincrement())
+  image       Bytes?
   name        String
   description String?
   createdAt   DateTime   @default(now())
@@ -237,4 +236,9 @@ enum PaymentMethod {
   DEBIT
   KREDIT
   QRIS
+}
+
+enum UserStatus {
+  AKTIF
+  TIDAK_AKTIF
 }

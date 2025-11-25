@@ -11,8 +11,10 @@ import { UpdateProductUnitDto } from './dto/update-product-unit.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';  
 import { StatsType } from './dto/stats-type.enum';
-import { Role, OrderStatus, PaymentMethod } from '../../generated/prisma';
+import { Role, OrderStatus, PaymentMethod, UserStatus } from '../../generated/prisma';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import * as bcrypt from 'bcrypt';
+import { BadRequestException } from '@nestjs/common/exceptions';
 
 @Injectable()
 export class AdminService {
@@ -109,6 +111,14 @@ export class AdminService {
   async deleteCategory(id: number) {
     await this.getCategoryById(id);
     return this.prisma.category.delete({ where: { id } });
+  }
+
+async updateCategoryImageBytes(id: number, buffer: Buffer) {
+    await this.getCategoryById(id);
+    return this.prisma.category.update({
+      where: { id },
+      data: { image: buffer },
+    });
   }
 
   // =====================================================
@@ -218,31 +228,84 @@ async deleteProductUnit(unitId: number) {
   }
 
   // =====================================================
-  // ===================== USER (KASIR) ==================
+  // ===================== USER MANAGEMENT ==============
   // =====================================================
-
   async createUser(dto: CreateUserDto) {
-    return this.prisma.user.create({ data: dto });
+    // Cek email unik
+    const exists = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
+    if (exists) throw new BadRequestException('Email sudah dipakai');
+
+    // Hash password
+    const hashed = await bcrypt.hash(dto.password, 10);
+
+    return this.prisma.user.create({
+      data: {
+        email: dto.email,
+        username: dto.username,
+        password: hashed,
+        role: dto.role,
+        status: UserStatus.AKTIF,
+      },
+    });
   }
 
+  // =============== GET ALL ===============
   async getAllUsers() {
-    return this.prisma.user.findMany({ orderBy: { username: 'asc' } });
+    return this.prisma.user.findMany({
+      orderBy: { username: 'asc' },
+    });
   }
 
+  // =============== GET BY ID ===============
   async getUserById(id: number) {
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) throw new NotFoundException('User tidak ditemukan');
     return user;
   }
 
+  // =============== UPDATE ===============
   async updateUser(id: number, dto: UpdateUserDto) {
-    await this.getUserById(id);
-    return this.prisma.user.update({ where: { id }, data: dto });
+    await this.getUserById(id); // validasi id
+
+    const updateData: any = {
+      email: dto.email,
+      username: dto.username,
+      role: dto.role,
+      status: dto.status,
+    };
+
+    // Kalau password ikut di-update, hash ulang
+    if (dto.password) {
+      updateData.password = await bcrypt.hash(dto.password, 10);
+    }
+
+    return this.prisma.user.update({
+      where: { id },
+      data: updateData,
+    });
   }
 
+  // =============== DELETE ===============
   async deleteUser(id: number) {
-    await this.getUserById(id);
+    await this.getUserById(id); // validasi
     return this.prisma.user.delete({ where: { id } });
+  }
+
+  // =============== AUTO-DEACTIVATE USERS ===============
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  async deactivateInactiveUsers() {
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setDate(oneMonthAgo.getDate() - 30);
+
+    await this.prisma.user.updateMany({
+      where: {
+        lastLogin: { lt: oneMonthAgo },
+        status: UserStatus.AKTIF,
+      },
+      data: { status: UserStatus.TIDAK_AKTIF },
+    });
   }
 
   // =====================================================
@@ -320,19 +383,7 @@ async allOrders() {
   });
 }
 
-  // ===================== USER MANAGEMENT =====================
-  async listUsers() {
-    return this.prisma.user.findMany({
-      select: { id: true, email: true, role: true, username: true, createdAt: true },
-    });
-  }
-
-  async changeUserRole(id: number, role: Role) {
-    const user = await this.prisma.user.findUnique({ where: { id } });
-    if (!user) throw new NotFoundException('User tidak ditemukan');
-    return this.prisma.user.update({ where: { id }, data: { role } });
-  }
-
+  
   // ===================== STATISTIK =====================
   async getStats(type: StatsType, years: number[]) {
     const result: {

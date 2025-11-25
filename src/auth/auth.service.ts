@@ -9,6 +9,7 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { Role } from '../../generated/prisma';
+import { UserStatus } from '../../generated/prisma';
 import { MailerService } from '@nestjs-modules/mailer';
 
 @Injectable()
@@ -167,22 +168,40 @@ export class AuthService {
   // ======================================================
   // 🔹 LOGIN (Bisa pakai Email atau Username)
   // ======================================================
-  async validateUser(identifier: string, password: string) {
-    const user = await this.prisma.user.findFirst({
-      where: {
-        OR: [{ email: identifier }, { username: identifier }],
-      },
-    });
+  // ======================================================
+// 🔹 LOGIN (Bisa pakai Email atau Username)
+// ======================================================
+async validateUser(identifier: string, password: string) {
+  const user = await this.prisma.user.findFirst({
+    where: {
+      OR: [{ email: identifier }, { username: identifier }],
+    },
+  });
 
-    if (!user) throw new UnauthorizedException('User tidak ditemukan');
-
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid)
-      throw new UnauthorizedException('Password salah');
-
-    const { password: _, ...result } = user;
-    return result;
+  if (!user) {
+    throw new UnauthorizedException('User tidak ditemukan');
   }
+
+  // ❌ Tolak login jika status NON AKTIF
+  if (user.status === UserStatus.TIDAK_AKTIF) {
+    throw new UnauthorizedException('Akun Anda tidak aktif, hubungi admin');
+  }
+
+  const isPasswordValid = await bcrypt.compare(password, user.password);
+  if (!isPasswordValid) {
+    throw new UnauthorizedException('Password salah');
+  }
+
+  // ✅ Update lastLogin setelah login BERHASIL
+  const updatedUser = await this.prisma.user.update({
+    where: { id: user.id },
+    data: { lastLogin: new Date() },
+  });
+
+  const { password: _, ...result } = updatedUser;
+  return result;
+}
+
 
   async login(user: any) {
     if (!user || !user.id) {
