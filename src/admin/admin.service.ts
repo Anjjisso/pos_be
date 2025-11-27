@@ -53,6 +53,9 @@ export class AdminService {
   });
 }
 
+async getTotalProductsCount() {
+    return this.prisma.product.count();
+  }
 
   async getAllProducts() {
     return this.prisma.product.findMany({
@@ -66,6 +69,49 @@ export class AdminService {
     if (!product) throw new NotFoundException('Produk tidak ditemukan');
     return product;
   }
+
+// ===================== EXPORT PRODUK (CSV & COPY) =====================
+async exportProductsToCsv(): Promise<string> {
+  const products = await this.prisma.product.findMany({
+    orderBy: { id: 'asc' },
+    include: {
+      category: true,
+      supplier: true,
+    },
+  });
+
+  const header = [
+    'ID',
+    'Gambar Produk',
+    'Kode Produk',
+    'Barcode',
+    'Nama Produk',
+    'Kategori',
+    'Supplier',
+    'Harga Jual',
+    'Stok'
+  ];
+
+  const rows = products.map((p) => [
+    p.id,
+    p.image ? 'Ada Gambar' : 'Tidak ada Gambar',
+    p.productCode ?? '',
+    p.barcode ?? '',
+    p.name ?? '',
+    p.category?.name ?? '',
+    p.supplier?.name ?? '',
+    p.price ?? 0,
+    p.stock ?? 0,
+  ]);
+
+  const csvLines = [
+    header.join(','),
+    ...rows.map((r) => r.join(',')),
+  ];
+
+  return csvLines.join('\n');
+}
+
 
   async updateProduct(id: number, dto: UpdateProductDto) {
     await this.getProductById(id);
@@ -94,14 +140,63 @@ export class AdminService {
   }
 
   async getAllCategories() {
-    return this.prisma.category.findMany({ orderBy: { id: 'asc' } });
+  return this.prisma.category.findMany({
+    orderBy: { id: 'asc' },
+    include: {
+      _count: {
+        select: { products: true }, // jumlah produk dalam kategori ini
+      },
+    },
+  });
+}
+
+async getTotalCategoriesCount() {
+    return this.prisma.category.count();
   }
 
   async getCategoryById(id: number) {
-    const category = await this.prisma.category.findUnique({ where: { id } });
-    if (!category) throw new NotFoundException('Kategori tidak ditemukan');
-    return category;
-  }
+  const category = await this.prisma.category.findUnique({
+    where: { id },
+    include: {
+      _count: {
+        select: { products: true },
+      },
+    },
+  });
+
+  if (!category) throw new NotFoundException('Kategori tidak ditemukan');
+  return category;
+}
+
+// ===================== EXPORT PRODUK (CSV & COPY) =====================
+async exportCategoriesToCsv(): Promise<string> {
+  const category = await this.prisma.category.findMany({
+    orderBy: { id: 'asc' },
+  });
+
+  const header = [
+    'ID',
+    'Gambar Kategori',
+    'Nama Kategori',
+    'Dibuat Pada',
+    
+  ];
+
+  const rows = category.map((c) => [
+    c.id ?? '',
+    c.image ? 'Ada Gambar' : 'Tidak ada Gambar',
+    c.name ?? '',
+    c.createdAt?.toISOString() ?? '',
+  ]);
+
+  const csvLines = [
+    header.join(','),
+    ...rows.map((r) => r.join(',')),
+  ];
+
+  return csvLines.join('\n');
+}
+
 
   async updateCategory(id: number, dto: UpdateCategoryDto) {
     await this.getCategoryById(id);
@@ -121,7 +216,7 @@ async updateCategoryImageBytes(id: number, buffer: Buffer) {
     });
   }
 
-  // =====================================================
+// =====================================================
 // ===================== PRODUCT UNIT ===================
 // =====================================================
 
@@ -162,6 +257,44 @@ async getUnitById(unitId: number) {
   return unit;
 }
 
+async getTotalProductUnitsCount() {
+    return this.prisma.productUnit.count();
+  }
+
+// ===================== EXPORT PRODUK (CSV & COPY) =====================
+async exportProductUnitToCsv(): Promise<string> {
+  const unit = await this.prisma.productUnit.findMany({
+    orderBy: { id: 'asc' },
+    include: {
+      product: true,
+    },
+  });
+
+  const header = [
+    'ID',
+    'produk',
+    'Nama Satuan',
+    'Pcs per Satuan',
+    'Harga Jual',
+    
+  ];
+
+  const rows = unit.map((u) => [
+    u.id,
+    u.product?.name ?? '',
+    u.unitName ?? '',
+    u.multiplier ?? 0,
+    u.price ?? 0,
+  ]);
+
+  const csvLines = [
+    header.join(','),
+    ...rows.map((r) => r.join(',')),
+  ];
+
+  return csvLines.join('\n');
+}
+
 async updateProductUnit(unitId: number, dto: UpdateProductUnitDto) {
   await this.getUnitById(unitId);
   return this.prisma.productUnit.update({
@@ -194,6 +327,10 @@ async deleteProductUnit(unitId: number) {
     const supplier = await this.prisma.supplier.findUnique({ where: { id } });
     if (!supplier) throw new NotFoundException('Supplier tidak ditemukan');
     return supplier;
+  }
+
+  async getTotalSuppliersCount() {
+    return this.prisma.supplier.count();
   }
 
   async updateSupplier(id: number, dto: UpdateSupplierDto) {
@@ -264,6 +401,43 @@ async deleteProductUnit(unitId: number) {
     if (!user) throw new NotFoundException('User tidak ditemukan');
     return user;
   }
+
+  async getTotalUsersCount() {
+    return this.prisma.user.count();
+  }
+
+  // ===================== EXPORT PRODUK (CSV & COPY) =====================
+async exportUsersToCsv(): Promise<string> {
+  const user = await this.prisma.user.findMany({
+    orderBy: { id: 'asc' },
+  });
+
+  const header = [
+    'No',
+    'Username',
+    'Email',
+    'Role',
+    'Dibuat Pada',
+    'Status',
+  ];
+
+  const rows = user.map((u) => [
+    u.id,
+    u.username ?? '',
+    u.email ?? '',
+    u.role ?? '',
+    u.createdAt?.toISOString() ?? '',
+    u.status ?? '',
+
+  ]);
+
+  const csvLines = [
+    header.join(','),
+    ...rows.map((r) => r.join(',')),
+  ];
+
+  return csvLines.join('\n');
+}
 
   // =============== UPDATE ===============
   async updateUser(id: number, dto: UpdateUserDto) {
