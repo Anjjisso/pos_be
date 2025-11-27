@@ -60,6 +60,24 @@ export class AdminController {
     return this.adminService.getAllProducts();
   }
 
+  @Get('products/total')
+  getTotalProducts() {
+  return this.adminService.getTotalProductsCount();
+}
+
+@Get('products/export')
+async exportProducts(@Res() res: Response) {
+  const csv = await this.adminService.exportProductsToCsv();
+
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader(
+    'Content-Disposition',
+    'attachment; filename="data-produk-posnuka.csv"'
+  );
+
+  return res.send(csv);
+}
+
   @Patch('products/:id')
   @ApiOperation({ summary: 'Admin memperbarui produk' })
   updateProduct(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateProductDto) {
@@ -128,6 +146,24 @@ export class AdminController {
     return this.adminService.getUnitById(unitId);
   }
 
+  @Get('product-units/total')
+  getTotalProductUnits() {
+    return this.adminService.getTotalProductUnitsCount();
+  }
+
+@Get('product-units/export')
+async exportProductUnit(@Res() res: Response) {
+  const csv = await this.adminService.exportProductUnitToCsv();
+
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader(
+    'Content-Disposition',
+    'attachment; filename="data-Data Satuan-posnuka.csv"'
+  );
+
+  return res.send(csv);
+}
+
   // ================================
   // 🔹 UPDATE PRODUCT UNIT
   // ================================
@@ -157,6 +193,22 @@ createCategory(@Body() dto: CreateCategoryDto) {
 @Get('categories')
 getAllCategories() {
   return this.adminService.getAllCategories();
+}
+
+@Get('categories/total')
+getTotalCategories() {
+    return this.adminService.getTotalCategoriesCount();
+  }
+
+@Get('categories/export')
+async exportCategories(@Res() res: Response) {
+  const csv = await this.adminService.exportCategoriesToCsv();
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader(
+    'Content-Disposition',
+    'attachment; filename="data-kategori-posnuka.csv"'
+  );
+  return res.send(csv);
 }
 
 @Patch('categories/:id')
@@ -211,6 +263,11 @@ createSupplier(@Body() dto: CreateSupplierDto) {
 getAllSuppliers() {
   return this.adminService.getAllSuppliers();
 }
+
+@Get('suppliers/total')
+getTotalSuppliers() {
+    return this.adminService.getTotalSuppliersCount();
+  }
 
 @Patch('suppliers/:id')
 updateSupplier(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateSupplierDto) {
@@ -335,6 +392,24 @@ listPaymentMethods() {
 @ApiOperation({ summary: 'Admin melihat daftar user' })
 listUsers() {
   return this.adminService.getAllUsers();
+}
+
+@Get('users/total')
+  getTotalUsers() {
+    return this.adminService.getTotalUsersCount();
+  }
+
+@Get('users/export')
+async exportUsers(@Res() res: Response) {
+  const csv = await this.adminService.exportUsersToCsv();
+
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader(
+    'Content-Disposition',
+    'attachment; filename="data-User-posnuka.csv"'
+  );
+
+  return res.send(csv);
 }
 
 // DETAIL USER
