@@ -85,6 +85,46 @@ export class KasirService {
   });
 }
 
+  // ======================
+  // ✔ SEARCH ORDER
+  // ======================
+
+  // 🔍 1) Search berdasarkan nama / barcode saja
+async searchProducts(query?: string) {
+  const where: any = {};
+
+  if (query && query.trim() !== '') {
+    where.OR = [
+      { name: { contains: query } },
+      { barcode: { contains: query } },
+    ];
+  }
+
+  return this.prisma.product.findMany({
+    where,
+    include: { category: true },
+    orderBy: { name: 'asc' },
+  });
+}
+
+// 🧩 2) Filter berdasarkan kategori saja
+async getProductsByCategory(category?: string) {
+  const where: any = {};
+
+  // kalau "ALL" atau kosong → tampilkan semua
+  if (category && category !== 'ALL') {
+    where.category = { name: category };
+  }
+
+  return this.prisma.product.findMany({
+    where,
+    include: { category: true },
+    orderBy: { name: 'asc' },
+  });
+}
+
+
+
 
   // ======================
   // ✔ HISTORY ORDER
