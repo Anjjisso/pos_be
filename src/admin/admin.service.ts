@@ -227,12 +227,17 @@ async createProductUnit(dto: CreateProductUnitDto) {
   });
   if (!product) throw new NotFoundException('Produk tidak ditemukan');
 
+  const multiplier = dto.multiplier ?? 1;
+
+  // 💰 harga unit = harga per PCS × jumlah PCS per unit
+  const unitPrice = product.price * multiplier;
+
   return this.prisma.productUnit.create({
     data: {
       productId: dto.productId,
       unitName: dto.unitName,
-      multiplier: dto.multiplier,
-      price: dto.price,
+      multiplier,
+      price: unitPrice, // ✅ otomatis, tidak dari input user
     },
   });
 }
@@ -258,10 +263,10 @@ async getUnitById(unitId: number) {
 }
 
 async getTotalProductUnitsCount() {
-    return this.prisma.productUnit.count();
-  }
+  return this.prisma.productUnit.count();
+}
 
-// ===================== EXPORT PRODUK (CSV & COPY) =====================
+// ===================== EXPORT PRODUK UNIT (CSV) =====================
 async exportProductUnitToCsv(): Promise<string> {
   const unit = await this.prisma.productUnit.findMany({
     orderBy: { id: 'asc' },
@@ -272,34 +277,48 @@ async exportProductUnitToCsv(): Promise<string> {
 
   const header = [
     'ID',
-    'produk',
+    'Produk',
     'Nama Satuan',
     'Pcs per Satuan',
-    'Harga Jual',
-    
+    'Harga Jual per Unit',
   ];
 
   const rows = unit.map((u) => [
     u.id,
     u.product?.name ?? '',
     u.unitName ?? '',
-    u.multiplier ?? 0,
-    u.price ?? 0,
+    u.multiplier ?? 1,
+    u.price ?? 0, // ✅ ini harga per unit (Dus/Pack)
   ]);
 
-  const csvLines = [
-    header.join(','),
-    ...rows.map((r) => r.join(',')),
-  ];
+  const csvLines = [header.join(','), ...rows.map((r) => r.join(','))];
 
   return csvLines.join('\n');
 }
 
 async updateProductUnit(unitId: number, dto: UpdateProductUnitDto) {
-  await this.getUnitById(unitId);
+  const existingUnit = await this.getUnitById(unitId);
+
+  // Ambil produk dari unit
+  const product = await this.prisma.product.findUnique({
+    where: { id: existingUnit.productId },
+  });
+  if (!product) throw new NotFoundException('Produk tidak ditemukan');
+
+  // Kalau multiplier baru tidak dikirim, pakai yang lama
+  const newMultiplier =
+    dto.multiplier !== undefined ? dto.multiplier : existingUnit.multiplier;
+
+  // 💰 hitung ulang harga unit
+  const unitPrice = product.price * newMultiplier;
+
   return this.prisma.productUnit.update({
     where: { id: unitId },
-    data: dto,
+    data: {
+      unitName: dto.unitName ?? existingUnit.unitName,
+      multiplier: newMultiplier,
+      price: unitPrice, // ✅ tetap ikut harga product
+    },
   });
 }
 
