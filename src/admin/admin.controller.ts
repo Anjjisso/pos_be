@@ -60,6 +60,16 @@ export class AdminController {
     return this.adminService.getAllProducts();
   }
 
+  @Get('products/search')
+  @ApiQuery({
+  name: 'q',
+  required: false,
+  description: 'Keyword pencarian (nama, barcode, atau kode produk)',
+  })
+  async getProducts(@Query('q') q?: string) {
+    return this.adminService.searchProducts(q);
+  }
+
   @Get('products/total')
   getTotalProducts() {
   return this.adminService.getTotalProductsCount();
@@ -151,6 +161,21 @@ async exportProducts(@Res() res: Response) {
     return this.adminService.getTotalProductUnitsCount();
   }
 
+  @Get('product-units/all')
+  getAllProductUnits() {
+    return this.adminService.getAllProductUnits();
+  }
+
+@Get('products-units/search')
+  @ApiQuery({
+  name: 'q',
+  required: false,
+  description: 'Keyword pencarian (nama satuan)',
+  })
+  async getAllProductUnit(@Query('q') q?: string) {
+    return this.adminService.searchProductUnit(q);
+  }
+  
 @Get('product-units/export')
 async exportProductUnit(@Res() res: Response) {
   const csv = await this.adminService.exportProductUnitToCsv();
@@ -198,6 +223,16 @@ getAllCategories() {
 @Get('categories/total')
 getTotalCategories() {
     return this.adminService.getTotalCategoriesCount();
+  }
+
+@Get('categories/search')
+  @ApiQuery({
+  name: 'q',
+  required: false,
+  description: 'Keyword pencarian (nama kategori)',
+  })
+  async getCategory(@Query('q') q?: string) {
+    return this.adminService.searchCategory(q);
   }
 
 @Get('categories/export')
@@ -262,6 +297,16 @@ createSupplier(@Body() dto: CreateSupplierDto) {
 @Get('suppliers')
 getAllSuppliers() {
   return this.adminService.getAllSuppliers();
+}
+
+@Get('suppliers/search')
+@ApiQuery({
+  name: 'q',
+  required: false,
+  description: 'Keyword pencarian (nama, barcode, atau kode produk)',
+})
+async getSuppliers(@Query('q') q?: string) {
+  return this.adminService.searchSupplier(q);
 }
 
 @Get('suppliers/total')
@@ -397,6 +442,16 @@ listUsers() {
 @Get('users/total')
   getTotalUsers() {
     return this.adminService.getTotalUsersCount();
+  }
+
+@Get('Users/search')
+  @ApiQuery({
+  name: 'q',
+  required: false,
+  description: 'Keyword pencarian (nama User)',
+  })
+  async getAllUser(@Query('q') q?: string) {
+    return this.adminService.searchUser(q);
   }
 
 @Get('users/export')
