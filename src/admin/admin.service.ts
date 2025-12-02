@@ -70,6 +70,31 @@ async getTotalProductsCount() {
     return product;
   }
 
+  // ===================== SEARCH PRODUK =====================
+async searchProducts(query?: string) {
+  const q = query?.trim();
+
+  // Kalau tidak ada keyword -> kembalikan semua produk
+  if (!q) {
+    return this.getAllProducts();
+  }
+
+  return this.prisma.product.findMany({
+    where: {
+      OR: [
+        { name: { contains: q } },        // cari di nama produk
+        { barcode: { contains: q } },     // cari di barcode
+        { productCode: { contains: q } }, // cari di kode produk "NUKA-0001" dll
+      ],
+    },
+    orderBy: { createdAt: 'desc' },
+    include: {
+      category: true,
+      supplier: true,
+    },
+  });
+}
+
 // ===================== EXPORT PRODUK (CSV & COPY) =====================
 async exportProductsToCsv(): Promise<string> {
   const products = await this.prisma.product.findMany({
@@ -168,6 +193,23 @@ async getTotalCategoriesCount() {
   return category;
 }
 
+async searchCategory(query?: string) {
+  const q = query?.trim();
+
+  // Kalau tidak ada keyword -> kembalikan semua produk
+  if (!q) {
+    return this.getAllCategories();
+  }
+
+  return this.prisma.category.findMany({
+    where: {
+      OR: [
+        { name: { contains: q } }       // cari di nama produk
+      ],
+    },
+  });
+}
+
 // ===================== EXPORT PRODUK (CSV & COPY) =====================
 async exportCategoriesToCsv(): Promise<string> {
   const category = await this.prisma.category.findMany({
@@ -242,6 +284,13 @@ async createProductUnit(dto: CreateProductUnitDto) {
   });
 }
 
+async getAllProductUnits() {
+  return this.prisma.productUnit.findMany({
+    orderBy: { id: 'asc' }, 
+    include: { product: true },
+  });
+}
+
 async getUnitsByProduct(productId: number) {
   const product = await this.prisma.product.findUnique({
     where: { id: productId },
@@ -264,6 +313,23 @@ async getUnitById(unitId: number) {
 
 async getTotalProductUnitsCount() {
   return this.prisma.productUnit.count();
+}
+
+async searchProductUnit(query?: string) {
+  const q = query?.trim();
+
+  // Kalau tidak ada keyword -> kembalikan semua produk
+  if (!q) {
+    return this.getAllProductUnits();
+  }
+
+  return this.prisma.productUnit.findMany({
+    where: {
+      OR: [
+        { unitName: { contains: q } }        // cari di nama produk
+      ],
+    },
+  });
 }
 
 // ===================== EXPORT PRODUK UNIT (CSV) =====================
@@ -348,6 +414,23 @@ async deleteProductUnit(unitId: number) {
     return supplier;
   }
 
+  async searchSupplier(query?: string) {
+  const q = query?.trim();
+
+  // Kalau tidak ada keyword -> kembalikan semua produk
+  if (!q) {
+    return this.getAllSuppliers();
+  }
+
+  return this.prisma.supplier.findMany({
+    where: {
+      OR: [
+        { name: { contains: q } }        // cari di nama produk
+      ],
+    },
+  });
+}
+
   async getTotalSuppliersCount() {
     return this.prisma.supplier.count();
   }
@@ -420,6 +503,24 @@ async deleteProductUnit(unitId: number) {
     if (!user) throw new NotFoundException('User tidak ditemukan');
     return user;
   }
+
+async searchUser(query?: string) {
+  const q = query?.trim();
+
+  // Kalau tidak ada keyword -> kembalikan semua produk
+  if (!q) {
+    return this.getAllUsers();
+  }
+
+  return this.prisma.user.findMany({
+    where: {
+      OR: [
+        { name: { contains: q } },
+        { email: {contains: q }}        // cari di nama produk
+      ],
+    },
+  });
+}
 
   async getTotalUsersCount() {
     return this.prisma.user.count();

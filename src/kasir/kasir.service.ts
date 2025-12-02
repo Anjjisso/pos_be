@@ -11,79 +11,134 @@ export class KasirService {
   constructor(private prisma: PrismaService) {}
 
   // ======================
-  // ✔ CREATE ORDER
-  // ======================
-  async createOrder(dto: CreateOrderDto, userId: number) {
-  let total = 0;
+// ✔ CREATE ORDER
+// ======================
+async createOrder(dto: CreateOrderDto, userId: number) {
+  return this.prisma.$transaction(async (tx) => {
+    let subtotal = 0;              // 👈 Sub Total (jumlah semua item setelah diskon item)
+    const itemsData: any[] = [];
 
-  const itemsData: any[] = []; // FIXED
+    for (const item of dto.items) {
+      // 1. Cari produk by barcode
+      const product = await tx.product.findUnique({
+        where: { barcode: item.barcode },
+      });
 
-  for (const item of dto.items) {
-    const product = await this.prisma.product.findUnique({
-      where: { barcode: item.barcode },
+      if (!product) {
+        throw new NotFoundException(
+          `Produk dengan barcode ${item.barcode} tidak ditemukan`,
+        );
+      }
+
+      // 2. Cari unit yg dipilih
+      const unit = await tx.productUnit.findUnique({
+        where: { id: item.unitId },
+      });
+
+      if (!unit || unit.productId !== product.id) {
+        throw new NotFoundException('Satuan tidak valid');
+      }
+
+      // 3. Hitung kebutuhan stok (dalam PCS)
+      const realStockNeeded = item.quantity * unit.multiplier;
+      if (product.stock < realStockNeeded) {
+        throw new BadRequestException('Stok tidak cukup');
+      }
+
+      // 4. Harga asli per UNIT (Dus/Pack/pcs) – sudah otomatis dari ProductUnit
+      const originalUnitPrice = unit.price;
+
+      // 5. Diskon per UNIT (item-level, seperti "Diskon 20%" di baris 1)
+      let itemDiscountValue = 0;
+
+      if (item.discountPercent) {
+        itemDiscountValue =
+          (originalUnitPrice * item.discountPercent) / 100;
+      }
+
+      if (item.discountValue) {
+        // di sini diasumsikan discountValue = potongan per UNIT
+        itemDiscountValue = item.discountValue;
+      }
+
+      const finalUnitPrice = originalUnitPrice - itemDiscountValue; // harga/unit setelah diskon
+      const lineSubtotal = finalUnitPrice * item.quantity;          // total baris
+      subtotal += lineSubtotal;
+
+      itemsData.push({
+        productId: product.id,
+        unitId: unit.id,
+        quantity: item.quantity,
+        unitPrice: originalUnitPrice,           // harga/unit sebelum diskon
+        unitMultiplier: unit.multiplier,        // PCS per unit
+        discountPercent: item.discountPercent ?? 0,
+        discountValue: itemDiscountValue,       // potongan per UNIT
+        subtotal: lineSubtotal,                 // total baris setelah diskon item
+      });
+
+      // 6. Kurangi stok produk (dalam PCS)
+      await tx.product.update({
+        where: { id: product.id },
+        data: {
+          stock: { decrement: realStockNeeded },
+        },
+      });
+    }
+
+    // ========================
+    // 7. DISKON & PAJAK ORDER
+    // ========================
+    // Nilai ini yang muncul di bagian:
+    // Sub Total / Diskon / Pajak / Total (kanan bawah)
+
+    const orderDiscountPercent = dto.discountPercent ?? 0;
+    let orderDiscountValue = dto.discountValue ?? 0;
+
+    if (!dto.discountValue && orderDiscountPercent > 0) {
+      orderDiscountValue = (subtotal * orderDiscountPercent) / 100;
+    }
+
+    const afterDiscount = subtotal - orderDiscountValue;
+
+    const taxPercent = dto.taxPercent ?? 0;   // di UI: 11%
+    let taxValue = dto.taxValue ?? 0;
+
+    if (!dto.taxValue && taxPercent > 0) {
+      taxValue = (afterDiscount * taxPercent) / 100;
+    }
+
+    const total = afterDiscount + taxValue;
+
+    // ========================
+    // 8. CREATE ORDER
+    // ========================
+    const order = await tx.order.create({
+      data: {
+        userId,
+        subtotal,                // 👈 Sub Total (sesuai UI)
+        discountPercent: orderDiscountPercent,
+        discountValue: orderDiscountValue,
+        taxPercent,
+        taxValue,
+        total,                   // 👈 Total setelah diskon + pajak
+        status: 'COMPLETED',       // atau OrderStatus.PENDING kalau kamu import enum-nya
+        paymentMethod: dto.paymentMethod,
+        items: { create: itemsData },
+      },
+      include: {
+        items: {
+          include: {
+            product: true,
+            unit: true,
+          },
+        },
+      },
     });
 
-    if (!product) {
-      throw new NotFoundException(`Produk dengan barcode ${item.barcode} tidak ditemukan`);
-    }
-
-    const unit = await this.prisma.productUnit.findUnique({
-      where: { id: item.unitId },
-    });
-
-    if (!unit || unit.productId !== product.id) {
-      throw new NotFoundException(`Satuan tidak valid`);
-    }
-
-    const realStockNeeded = item.quantity * unit.multiplier;
-    if (product.stock < realStockNeeded) {
-      throw new BadRequestException(`Stok tidak cukup`);
-    }
-
-    const originalPrice = unit.price;
-
-    let discountValue = 0; // FIXED
-
-    if (item.discountPercent) {
-      discountValue = (originalPrice * item.discountPercent) / 100;
-    }
-
-    if (item.discountValue) {
-      discountValue = item.discountValue;
-    }
-
-    const finalPrice = originalPrice - discountValue;
-    const subtotal = finalPrice * item.quantity;
-    total += subtotal;
-
-    itemsData.push({                   // FIXED
-      productId: product.id,
-      unitId: unit.id,
-      quantity: item.quantity,
-      unitPrice: originalPrice,
-      unitMultiplier: unit.multiplier,
-      discountPercent: item.discountPercent ?? 0,
-      discountValue: discountValue,
-      subtotal,
-    });
-
-    await this.prisma.product.update({
-      where: { id: product.id },
-      data: { stock: product.stock - realStockNeeded },
-    });
-  }
-
-  return this.prisma.order.create({
-    data: {
-      userId,
-      total,
-      status: 'PENDING',
-      paymentMethod: dto.paymentMethod,
-      items: { create: itemsData }, // FIXED
-    },
-    include: { items: { include: { product: true, unit: true } } },
+    return order;
   });
 }
+
 
   // ======================
   // ✔ SEARCH ORDER
