@@ -8,6 +8,8 @@ import { PelangganModule } from './pelanggan/pelanggan.module';
 import { AdminModule } from './admin/admin.module';
 import { KasirModule } from './kasir/kasir.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ProfileService } from './profile/profile.service';
+import { ProfileModule } from './profile/profile.module';
 
 
 
@@ -35,7 +37,9 @@ import { ScheduleModule } from '@nestjs/schedule';
     PelangganModule,
     AdminModule,
     KasirModule,
+    ProfileModule,
   ],
+  providers: [ProfileService],
 
 })
 export class AppModule {}
