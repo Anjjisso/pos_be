@@ -1,18 +1,23 @@
-import { IsOptional, IsString, IsNumberString } from 'class-validator';
+import { IsOptional, IsString } from 'class-validator';
 
 export class FilterReportDto {
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   from?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   to?: string;
 
-  @IsOptional() @IsNumberString()
+  @IsOptional()
+  @IsString()
   cashierId?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   paymentMethod?: string;
 
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   search?: string;
 }
